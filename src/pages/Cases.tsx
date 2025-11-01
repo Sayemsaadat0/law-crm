@@ -1,0 +1,13 @@
+function Cases() {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-4">Cases</h1>
+      <p className="text-muted-foreground">
+        Manage all your legal cases from this page.
+      </p>
+    </div>
+  )
+}
+
+export default Cases
+
