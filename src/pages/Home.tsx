@@ -4,7 +4,7 @@ import { DollarSign, Users, UserPlus, BarChart3 } from "lucide-react";
 function Home() {
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         <StatsCard
           icon={<DollarSign className="w-6 h-6" />}
           title="Today's Money"
