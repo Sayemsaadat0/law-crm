@@ -1,22 +1,33 @@
-import {createBrowserRouter} from "react-router-dom"; 
-// import PublicMain from "../components/layout/PublicMain";
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import { lazy, Suspense } from 'react';
-
-const Home = lazy(() => import('../pages/Home'));
-// const About = lazy(() => import('../pages/About'));
-const Cases = lazy(() => import('../pages/Cases'));
-const Members = lazy(() => import('../pages/Members'));
-const Profile = lazy(() => import('../pages/Profile'));
-const Settings = lazy(() => import('../pages/Settings'));
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const Home = lazy(() => import("../pages/Home"));
+const Cases = lazy(() => import("../pages/Cases"));
+const Members = lazy(() => import("../pages/Members"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Settings = lazy(() => import("../pages/Settings"));
 
 const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
+    element: <Navigate to="/dashboard/home" replace />,
+  },
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/dashboard",
     element: <DashboardLayout />,
     children: [
+      // redirect /dashboard → /dashboard/home
       {
-        path: '/',
+        index: true,
+        element: <Navigate to="home" replace />,
+      },
+      {
+        path: "home",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Home />
@@ -24,7 +35,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/cases',
+        path: "cases",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Cases />
@@ -32,7 +43,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/members',
+        path: "members",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Members />
@@ -40,7 +51,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/profile',
+        path: "profile",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Profile />
@@ -48,7 +59,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/settings',
+        path: "settings",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Settings />
@@ -57,7 +68,6 @@ const router = createBrowserRouter([
       },
     ],
   },
- 
 ]);
 
-export default router
+export default router;
