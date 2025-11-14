@@ -58,6 +58,7 @@ export function DashboardNavbar() {
               size="icon"
               className="relative h-9 w-9 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
+              {/* sss */}
               <Bell className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-slate-400 ring-2 ring-white dark:ring-slate-900" />
             </Button>
