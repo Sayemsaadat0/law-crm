@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 
 // Reduce padding and font size for a smaller, less bulky button appearance
 export const buttonVariants = cva(
-  "leading-none text-white transition-all disabled:bg-slate-300 text-sm", // text-sm is default, can be overridden in variants if needed
+  "leading-none text-white transition-all disabled:bg-slate-300 text-sm cursor-pointer ", // text-sm is default, can be overridden in variants if needed
   {
     variants: {
       variant: {
         primarybtn:
-          "rounded-md bg-primary text-white py-1.5 px-3 md:px-5 md:py-2.5 hover:bg-blue-700 transition-all text-sm md:text-base",
+          "rounded-md bg-primary text-white py-1.5 px-3 md:px-5 md:py-2.5 hover:bg-primary/90 transition-all text-sm md:text-base",
         outlineBtn:
           "rounded-md bg-transparent text-blue-700 border border-primary py-1.5 px-3 md:px-5 md:py-2.5 hover:bg-blue-50 hover:border-blue-700 transition-all text-sm md:text-base",
         textBtn:
