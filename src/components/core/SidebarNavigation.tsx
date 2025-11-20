@@ -42,6 +42,11 @@ const menuItems = [
     url: "/dashboard/settings",
     icon: Settings,
   },
+  {
+    title: "Courts",
+    url: "/dashboard/courts",
+    icon: Scale,
+  },
 ];
 
 export function SidebarNavigation() {

@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import Courts from "@/pages/Courts";
+import AddCasePage from "@/pages/AddCasePage";
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const Home = lazy(() => import("../pages/Home"));
 const Cases = lazy(() => import("../pages/Cases"));
@@ -43,6 +45,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "cases/create",
+        element: (
+          <Suspense fallback={<p>Loading...</p>}>
+            <AddCasePage />
+          </Suspense>
+        ),
+      },
+      {
         path: "members",
         element: (
           <Suspense fallback={<p>Loading...</p>}>
@@ -63,6 +73,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<p>Loading...</p>}>
             <Settings />
+          </Suspense>
+        ),
+      },
+      {
+        path: "courts",
+        element: (
+          <Suspense fallback={<p>Loading...</p>}>
+            <Courts />
           </Suspense>
         ),
       },
