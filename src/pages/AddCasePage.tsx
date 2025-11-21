@@ -94,12 +94,12 @@ type StepHeaderProps = {
   description: string;
 };
 
-const StepHeader = ({ title, description, Icon }: StepHeaderProps) => {
+const StepHeader = ({ title, description }: StepHeaderProps) => {
   return (
     <div className="text-center mb-8">
-      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      {/* <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <Icon className="w-8 h-8 text-primary" />
-      </div>
+      </div> */}
       <h2 className="text-2xl font-semibold text-gray-900 mb-2">{title}</h2>
       <p className="text-gray-600">{description}</p>
     </div>
