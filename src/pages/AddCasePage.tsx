@@ -39,7 +39,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({
   ];
 
   return (
-    <div className="w-full mb-8">
+    <div className="w-full max-w-7xl mx-auto mb-8">
       <div className="flex items-center justify-between mb-4">
         {steps.map((step) => {
           const isCompleted = step.number < currentStep;
@@ -116,8 +116,6 @@ const schema = z.object({
   lawyer_id: z.string().min(1, "Lawyer is required"),
   case_stage: z.string().min(1, "Case stage is required"),
   case_description: z.string().min(1, "Case description is required"),
-  client_id: z.string().min(1, "Client is required"),
-  parties_id: z.string().min(1, "Parties is required"),
 
   client_name: z.string().min(1, "Name is required"),
   client_description: z.string().min(1, "Description is required"),
@@ -147,15 +145,15 @@ const lawyers = [
 
 const caseStages = ["Hearing", "Filing", "Pending", "Closed"];
 
-const clients = [
-  { id: "1", name: "Client One" },
-  { id: "2", name: "Client Two" },
-];
+// const clients = [
+//   { id: "1", name: "Client One" },
+//   { id: "2", name: "Client Two" },
+// ];
 
-const parties = [
-  { id: "1", name: "Party A" },
-  { id: "2", name: "Party B" },
-];
+// const parties = [
+//   { id: "1", name: "Party A" },
+//   { id: "2", name: "Party B" },
+// ];
 
 // ------------------------------------------------------
 // MAIN COMPONENT
@@ -182,8 +180,8 @@ export default function AddCasePage() {
           "lawyer_id",
           "case_stage",
           "case_description",
-          "client_id",
-          "parties_id",
+          // "client_id",
+          // "parties_id",
         ];
         break;
 
@@ -226,7 +224,7 @@ export default function AddCasePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto w-full">
       <h1 className="text-2xl font-bold mb-6">Add New Case</h1>
 
       <div className="space-y-6 bg-white p-4 md:p-8 lg:p-12 rounded-2xl border">
@@ -359,55 +357,7 @@ export default function AddCasePage() {
                   )}
                 </div>
 
-                {/* Client */}
-                <div>
-                  <Label className="mb-2">Select Client</Label>
-                  <Select
-                    onValueChange={(v: string) => form.setValue("client_id", v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.client_id && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.client_id.message}
-                    </p>
-                  )}
-                </div>
 
-                {/* Party */}
-                <div>
-                  <Label className="mb-2">Select Party</Label>
-                  <Select
-                    onValueChange={(v: string) =>
-                      form.setValue("parties_id", v)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose party" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {parties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.parties_id && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.parties_id.message}
-                    </p>
-                  )}
-                </div>
               </div>
             </>
           )}

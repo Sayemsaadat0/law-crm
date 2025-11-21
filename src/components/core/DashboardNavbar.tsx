@@ -13,7 +13,7 @@ export function DashboardNavbar() {
   const page = paths[1] || "home";
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white dark:bg-slate-900">
+    <header className=" top-0 z-40 w-full border-b border-slate-200">
       <div className="flex flex-col gap-3 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
