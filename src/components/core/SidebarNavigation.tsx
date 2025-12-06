@@ -53,13 +53,17 @@ export function SidebarNavigation() {
   const location = useLocation();
 
   return (
-    <Sidebar className="m-4 rounded-xl border max-h-[calc(100vh-32px)] bg-white">
-      <Link
-        to="/"
-        className="flex items-center justify-center gap-3 w-full p-4"
-      >
-        <Scale className="h-5 w-5 text-black" />
-        <span className="font-semibold text-lg text-black">Law Firm</span>
+    <Sidebar className="m-4 rounded-xl border max-h-[calc(100vh-32px)] bg-gradient-to-b  from-gray-900 to-gray-800">
+      <Link to="/" className=" p-6 border-b border-gray-700">
+        <div className="flex items-center space-x-3">
+          <div className="bg-gradient-to-br from-primary/50 to-primary p-2 rounded-lg">
+            <Scale className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-white font-bold text-lg">LegalCase</h1>
+            <p className="text-gray-400 text-xs">Case Management</p>
+          </div>
+        </div>
       </Link>
       <SidebarContent className="px-4 py-3">
         <SidebarMenu className="space-y-1">
@@ -75,8 +79,8 @@ export function SidebarNavigation() {
                   className={cn(
                     "h-12 px-3 rounded-lg",
                     isActive
-                      ? "bg-purple-600 text-white"
-                      : "text-black hover:bg-gray-100"
+                      ? "bg-primary text-white"
+                      : "text-white hover:bg-gray-600"
                   )}
                 >
                   <Link to={item.url} className="flex items-center gap-3">

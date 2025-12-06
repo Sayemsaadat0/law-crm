@@ -7,7 +7,7 @@ const DashboardLayout = () => {
   return (
     <SidebarProvider>
       <SidebarNavigation />
-      <SidebarInset className="bg-blue-50/50">
+      <SidebarInset className="bg-gradient-to-br from-gray-50 to-gray-100">
         <DashboardNavbar />
         <div className="flex flex-1 flex-col py-4 pr-4">
           <Outlet />
