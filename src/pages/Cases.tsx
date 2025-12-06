@@ -54,7 +54,7 @@ const CasesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto w-full">
       <div className="flex justify-end">
         <Button>
           <Link to="create"> Add Case </Link>
