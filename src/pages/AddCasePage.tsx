@@ -1,14 +1,18 @@
-"use client";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-import { Button } from "@/components/ui/button";
+import * as z from "zod";
+import {
+  Plus,
+  ChevronRight,
+  ChevronLeft,
+  FileText,
+  User,
+  Users,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,98 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { User, FileText, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
-
-// ------------------------------------------------------
-// STEP INDICATOR
-// ------------------------------------------------------
-interface StepIndicatorProps {
-  currentStep: number;
-  totalSteps: number;
-}
-
-const StepIndicator: React.FC<StepIndicatorProps> = ({
-  currentStep,
-  totalSteps,
-}) => {
-  const steps = [
-    { number: 1, title: "Case Information", icon: User },
-    { number: 2, title: "Client Details", icon: FileText },
-    { number: 3, title: "Parties Details", icon: CheckCircle },
-  ];
-
-  return (
-    <div className="w-full max-w-7xl mx-auto mb-8">
-      <div className="flex items-center justify-between mb-4">
-        {steps.map((step) => {
-          const isCompleted = step.number < currentStep;
-          const isCurrent = step.number === currentStep;
-
-          return (
-            <div key={step.number} className="flex items-center">
-              <div
-                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  isCompleted
-                    ? "bg-green-500 border-green-500 text-white"
-                    : isCurrent
-                    ? "bg-blue-500 border-blue-500 text-white"
-                    : "bg-gray-100 border-gray-300 text-gray-500"
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : (
-                  <span className="text-sm font-medium">{step.number}</span>
-                )}
-              </div>
-              <span
-                className={`ml-2 text-sm font-medium ${
-                  isCompleted || isCurrent ? "text-gray-900" : "text-gray-500"
-                }`}
-              >
-                {step.title}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className="bg-primary h-2 rounded-full transition-all duration-300"
-          style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-// ------------------------------------------------------
-// STEP HEADER
-// ------------------------------------------------------
-type StepHeaderProps = {
-  title: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Icon: any;
-  description: string;
-};
-
-const StepHeader = ({ title, description }: StepHeaderProps) => {
-  return (
-    <div className="text-center mb-8">
-      {/* <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Icon className="w-8 h-8 text-primary" />
-      </div> */}
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">{title}</h2>
-      <p className="text-gray-600">{description}</p>
-    </div>
-  );
-};
-
-// ------------------------------------------------------
-// VALIDATION
-// ------------------------------------------------------
+// Schema and Types
 const schema = z.object({
   case_number: z.string().min(1, "Case number is required"),
   file_number: z.string().min(1, "File number is required"),
@@ -130,34 +43,398 @@ const schema = z.object({
 
 type FormType = z.infer<typeof schema>;
 
-// ------------------------------------------------------
-// STATIC DATA
-// ------------------------------------------------------
-const courts = [
+interface StepConfig {
+  number: number;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}
+
+interface Court {
+  id: string;
+  name: string;
+}
+
+interface Lawyer {
+  id: string;
+  name: string;
+}
+
+// Constants
+const steps: StepConfig[] = [
+  {
+    number: 1,
+    title: "Case Information",
+    description: "Enter basic case details",
+    icon: <FileText className="w-5 h-5" />,
+  },
+  {
+    number: 2,
+    title: "Client Details",
+    description: "Add client information",
+    icon: <User className="w-5 h-5" />,
+  },
+  {
+    number: 3,
+    title: "Party Details",
+    description: "Add party information",
+    icon: <Users className="w-5 h-5" />,
+  },
+];
+
+const courts: Court[] = [
   { id: "1", name: "Supreme Court" },
-  { id: "2", name: "District Court" },
+  { id: "2", name: "District Court - Civil Division" },
+  { id: "3", name: "District Court - Criminal" },
+  { id: "4", name: "High Court" },
+  { id: "5", name: "Family Court" },
+  { id: "6", name: "Labor Court" },
 ];
 
-const lawyers = [
-  { id: "1", name: "John Doe" },
-  { id: "2", name: "Imran Hossain" },
+const lawyers: Lawyer[] = [
+  { id: "1", name: "Sarah Johnson" },
+  { id: "2", name: "Robert Williams" },
+  { id: "3", name: "Jennifer Martinez" },
+  { id: "4", name: "David Anderson" },
+  { id: "5", name: "Amanda Clark" },
+  { id: "6", name: "Christopher Lee" },
 ];
 
-const caseStages = ["Hearing", "Filing", "Pending", "Closed"];
+const caseStages: string[] = [
+  "Filing",
+  "Hearing",
+  "Pending",
+  "Completed",
+  "Closed",
+];
 
-// const clients = [
-//   { id: "1", name: "Client One" },
-//   { id: "2", name: "Client Two" },
-// ];
+// Components
+const StepIndicator = ({ currentStep }: { currentStep: number }) => {
+  return (
+    <div className="mb-8">
+      <div className="flex justify-between items-center mb-4">
+        {steps.map((s, index) => (
+          <div key={s.number} className="flex items-center flex-1">
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
+                currentStep >= s.number
+                  ? "bg-blue-500 text-white shadow-lg"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {s.number}
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`flex-1 h-1 mx-2 rounded-full transition-all duration-300 ${
+                  currentStep > s.number ? "bg-blue-500" : "bg-gray-200"
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
 
-// const parties = [
-//   { id: "1", name: "Party A" },
-//   { id: "2", name: "Party B" },
-// ];
+      <div className="flex items-center space-x-3">
+        <div className="p-3 rounded-lg bg-blue-100">
+          {currentStep === 1 && <FileText className="w-6 h-6 text-blue-600" />}
+          {currentStep === 2 && <User className="w-6 h-6 text-blue-600" />}
+          {currentStep === 3 && <Users className="w-6 h-6 text-blue-600" />}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-blue-600">
+            Step {currentStep} of 3
+          </p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {steps[currentStep - 1].title}
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">
+            {steps[currentStep - 1].description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-// ------------------------------------------------------
-// MAIN COMPONENT
-// ------------------------------------------------------
+const FormField = ({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) => {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-900 mb-2">
+        {label}
+      </label>
+      {children}
+      {error && (
+        <p className="text-red-500 text-sm mt-2 flex items-center space-x-1">
+          <span>✕</span> <span>{error}</span>
+        </p>
+      )}
+    </div>
+  );
+};
+
+const Step1Form = ({
+  register,
+  errors,
+  setValue,
+  watch,
+}: {
+  register: any;
+  errors: any;
+  setValue: any;
+  watch: any;
+}) => {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <FormField label="Case Number" error={errors.case_number?.message}>
+          <Input
+            {...register("case_number")}
+            placeholder="e.g., CIV/2024/001"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+
+        <FormField label="File Number" error={errors.file_number?.message}>
+          <Input
+            {...register("file_number")}
+            placeholder="Enter file number"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+
+        <FormField label="Court" error={errors.court_id?.message}>
+          <Select
+            value={watch("court_id")}
+            onValueChange={(value: any) =>
+              setValue("court_id", value, { shouldValidate: true })
+            }
+          >
+            <SelectTrigger className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+              <SelectValue placeholder="Select a court" />
+            </SelectTrigger>
+            <SelectContent>
+              {courts.map((court) => (
+                <SelectItem key={court.id} value={court.id}>
+                  {court.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+
+        <FormField label="Lawyer" error={errors.lawyer_id?.message}>
+          <Select
+            value={watch("lawyer_id")}
+            onValueChange={(value: any) =>
+              setValue("lawyer_id", value, { shouldValidate: true })
+            }
+          >
+            <SelectTrigger className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+              <SelectValue placeholder="Select a lawyer" />
+            </SelectTrigger>
+            <SelectContent>
+              {lawyers.map((lawyer) => (
+                <SelectItem key={lawyer.id} value={lawyer.id}>
+                  {lawyer.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+
+        <FormField label="Case Stage" error={errors.case_stage?.message}>
+          <Select
+            value={watch("case_stage")}
+            onValueChange={(value: any) =>
+              setValue("case_stage", value, { shouldValidate: true })
+            }
+          >
+            <SelectTrigger className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+              <SelectValue placeholder="Select case stage" />
+            </SelectTrigger>
+            <SelectContent>
+              {caseStages.map((stage) => (
+                <SelectItem key={stage} value={stage}>
+                  {stage}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      </div>
+
+      <FormField
+        label="Case Description"
+        error={errors.case_description?.message}
+      >
+        <Textarea
+          {...register("case_description")}
+          placeholder="Provide detailed information about the case"
+          rows={5}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+        />
+      </FormField>
+    </div>
+  );
+};
+
+const Step2Form = ({ register, errors }: { register: any; errors: any }) => {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <FormField label="Client Name" error={errors.client_name?.message}>
+          <Input
+            {...register("client_name")}
+            placeholder="Enter client name"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+
+        <FormField
+          label="Account Number"
+          error={errors.account_number?.message}
+        >
+          <Input
+            {...register("account_number")}
+            placeholder="Enter account number"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+
+        <FormField label="Account Name" error={errors.account_name?.message}>
+          <Input
+            {...register("account_name")}
+            placeholder="Enter account name"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+
+        <FormField label="Account ID" error={errors.account_id?.message}>
+          <Input
+            {...register("account_id")}
+            placeholder="Enter account ID"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </FormField>
+      </div>
+
+      <FormField
+        label="Client Description"
+        error={errors.client_description?.message}
+      >
+        <Textarea
+          {...register("client_description")}
+          placeholder="Provide details about the client"
+          rows={5}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+        />
+      </FormField>
+    </div>
+  );
+};
+
+const Step3Form = ({ register, errors }: { register: any; errors: any }) => {
+  return (
+    <div className="space-y-5">
+      <FormField label="Party Name" error={errors.party_name?.message}>
+        <Input
+          {...register("party_name")}
+          placeholder="Enter party name"
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+        />
+      </FormField>
+
+      <FormField
+        label="Party Description"
+        error={errors.party_description?.message}
+      >
+        <Textarea
+          {...register("party_description")}
+          placeholder="Provide details about the party"
+          rows={5}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+        />
+      </FormField>
+
+      <FormField label="Additional Notes" error={errors.party_notes?.message}>
+        <Textarea
+          {...register("party_notes")}
+          placeholder="Add any additional notes about the party"
+          rows={4}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+        />
+      </FormField>
+    </div>
+  );
+};
+
+const FormNavigation = ({
+  currentStep,
+  isLastStep,
+  isSubmitting,
+  onPrevious,
+  onNext,
+}: {
+  currentStep: number;
+  isLastStep: boolean;
+  isSubmitting: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) => {
+  return (
+    <div className="flex justify-between items-center mt-10 pt-8 border-t border-gray-200">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={currentStep === 1}
+        className="flex items-center space-x-2 px-6 py-3 text-gray-700 font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span>Previous</span>
+      </button>
+
+      {!isLastStep ? (
+        <button
+          type="button"
+          onClick={onNext}
+          className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+        >
+          <span>Next</span>
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      ) : (
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:shadow-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center space-x-2"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Submitting...</span>
+            </>
+          ) : (
+            <>
+              <span>Submit Case</span>
+              <ChevronRight className="w-5 h-5" />
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Main Component
 export default function AddCasePage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -165,6 +442,22 @@ export default function AddCasePage() {
   const form = useForm<FormType>({
     resolver: zodResolver(schema),
     mode: "onChange",
+    defaultValues: {
+      case_number: "",
+      file_number: "",
+      court_id: "",
+      lawyer_id: "",
+      case_stage: "",
+      case_description: "",
+      client_name: "",
+      client_description: "",
+      account_number: "",
+      account_name: "",
+      account_id: "",
+      party_name: "",
+      party_description: "",
+      party_notes: "",
+    },
   });
 
   // VALIDATE STEP
@@ -180,8 +473,6 @@ export default function AddCasePage() {
           "lawyer_id",
           "case_stage",
           "case_description",
-          // "client_id",
-          // "parties_id",
         ];
         break;
 
@@ -218,309 +509,74 @@ export default function AddCasePage() {
     setLoading(true);
     setTimeout(() => {
       console.log("Form submitted:", data);
-      toast.success("Case added successfully!");
+      alert("Case added successfully!");
       setLoading(false);
+      setStep(1);
+      form.reset();
     }, 1000);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto w-full">
-      <h1 className="text-2xl font-bold mb-6">Add New Case</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-blue-500 via-orange-500 to-green-500"></div>
 
-      <div className="space-y-6 bg-white p-4 md:p-8 lg:p-12 rounded-2xl border">
-        <StepIndicator currentStep={step} totalSteps={3} />
-
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* STEP 1 */}
-          {step === 1 && (
-            <>
-              <StepHeader
-                title="Case Information"
-                description="Enter basic information about the case"
-                Icon={User}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Case Number */}
-                <div>
-                  <Label className="mb-2">Case Number</Label>
-                  <Input
-                    placeholder="Enter case number"
-                    {...form.register("case_number")}
-                  />
-                  {form.formState.errors.case_number && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.case_number.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* File Number */}
-                <div>
-                  <Label className="mb-2">File Number</Label>
-                  <Input
-                    placeholder="Enter file number"
-                    {...form.register("file_number")}
-                  />
-                  {form.formState.errors.file_number && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.file_number.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Court */}
-                <div>
-                  <Label className="mb-2">Select Court</Label>
-                  <Select
-                    onValueChange={(v: string) => form.setValue("court_id", v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose court" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courts.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.court_id && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.court_id.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Lawyer */}
-                <div>
-                  <Label className="mb-2">Select Lawyer</Label>
-                  <Select
-                    onValueChange={(v: string) => form.setValue("lawyer_id", v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose lawyer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lawyers.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.lawyer_id && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.lawyer_id.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Case Stage */}
-                <div>
-                  <Label className="mb-2">Case Stage</Label>
-                  <Select
-                    onValueChange={(v: string) =>
-                      form.setValue("case_stage", v)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose stage" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {caseStages.map((st) => (
-                        <SelectItem key={st} value={st}>
-                          {st}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.case_stage && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.case_stage.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Case Description */}
-                <div className="md:col-span-2">
-                  <Label className="mb-2">Case Description</Label>
-                  <Textarea
-                    placeholder="Enter case description"
-                    {...form.register("case_description")}
-                  />
-                  {form.formState.errors.case_description && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.case_description.message}
-                    </p>
-                  )}
-                </div>
-
-
+        <div className="p-8 lg:p-10">
+          <div className="mb-10">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="bg-blue-100 p-2 rounded-lg">
+                <Plus className="w-5 h-5 text-blue-600" />
               </div>
-            </>
-          )}
-
-          {/* STEP 2 */}
-          {step === 2 && (
-            <>
-              <StepHeader
-                title="Client Details"
-                description="Provide client details for the case"
-                Icon={FileText}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Client Name */}
-                <div>
-                  <Label className="mb-2">Name</Label>
-                  <Input
-                    placeholder="Client name"
-                    {...form.register("client_name")}
-                  />
-                  {form.formState.errors.client_name && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.client_name.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Account Number */}
-                <div>
-                  <Label className="mb-2">Account Number</Label>
-                  <Input
-                    placeholder="Enter account number"
-                    {...form.register("account_number")}
-                  />
-                  {form.formState.errors.account_number && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.account_number.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Account Name */}
-                <div>
-                  <Label className="mb-2">Account Name</Label>
-                  <Input
-                    placeholder="Enter account name"
-                    {...form.register("account_name")}
-                  />
-                  {form.formState.errors.account_name && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.account_name.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Account ID */}
-                <div>
-                  <Label className="mb-2">Account ID</Label>
-                  <Input
-                    placeholder="Enter account ID"
-                    {...form.register("account_id")}
-                  />
-                  {form.formState.errors.account_id && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.account_id.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <Label className="mb-2">Description</Label>
-                  <Textarea
-                    placeholder="Client description"
-                    {...form.register("client_description")}
-                  />
-                  {form.formState.errors.client_description && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.client_description.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* STEP 3 */}
-          {step === 3 && (
-            <>
-              <StepHeader
-                title="Parties Details"
-                description="Enter the details of the involved parties"
-                Icon={CheckCircle}
-              />
-
-              <div className="grid grid-cols-1 gap-4">
-                {/* Party Name */}
-                <div>
-                  <Label className="mb-2">Name</Label>
-                  <Input
-                    placeholder="Party name"
-                    {...form.register("party_name")}
-                  />
-                  {form.formState.errors.party_name && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.party_name.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Party Description */}
-                <div>
-                  <Label className="mb-2">Description</Label>
-                  <Textarea
-                    placeholder="Party description"
-                    {...form.register("party_description")}
-                  />
-                  {form.formState.errors.party_description && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.party_description.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <Label className="mb-2">Notes</Label>
-                  <Textarea
-                    placeholder="Additional notes"
-                    {...form.register("party_notes")}
-                  />
-                  {form.formState.errors.party_notes && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.party_notes.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* STEP BUTTONS */}
-          <div className="flex justify-between pt-4">
-            {step > 1 ? (
-              <Button type="button" variant="outlineBtn" onClick={prevStep}>
-                Previous
-              </Button>
-            ) : (
-              <div />
-            )}
-
-            {step < 3 ? (
-              <Button type="button" onClick={nextStep}>
-                Next
-              </Button>
-            ) : (
-              <Button type="submit" disabled={loading}>
-                {loading ? "Submitting..." : "Submit"}
-              </Button>
-            )}
+              <h1 className="text-3xl font-bold text-gray-900">Add New Case</h1>
+            </div>
+            <p className="text-gray-600">
+              Fill in the details to register a new legal case
+            </p>
           </div>
-        </form>
+
+          <StepIndicator currentStep={step} />
+
+          <div onSubmit={form.handleSubmit(onSubmit)}>
+            {step === 1 && (
+              <Step1Form
+                register={form.register}
+                errors={form.formState.errors}
+                setValue={form.setValue}
+                watch={form.watch}
+              />
+            )}
+
+            {step === 2 && (
+              <Step2Form
+                register={form.register}
+                errors={form.formState.errors}
+              />
+            )}
+
+            {step === 3 && (
+              <Step3Form
+                register={form.register}
+                errors={form.formState.errors}
+              />
+            )}
+
+            <FormNavigation
+              currentStep={step}
+              isLastStep={step === 3}
+              isSubmitting={loading}
+              onPrevious={prevStep}
+              onNext={nextStep}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100">
+        <p className="text-sm text-gray-600">
+          <span className="font-semibold text-gray-900">Note:</span> All
+          information will be securely stored and can be edited later in the
+          Cases section.
+        </p>
       </div>
     </div>
   );

@@ -1,14 +1,11 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Scale, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import NotificationDropdown from "../shared/NotificationDropdown";
 import UserProfileDropdown from "../shared/UserProfileDropdown";
 
 export function DashboardNavbar() {
-  const [searchValue, setSearchValue] = useState("");
   const { pathname } = useLocation();
   const paths = pathname.split("/").filter(Boolean); // ["dashboard", "home"]
 
@@ -52,16 +49,6 @@ export function DashboardNavbar() {
             >
               <Search className="h-5 w-5" />
             </Button>
-            <div className="relative hidden md:block md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
-              <Input
-                type="search"
-                placeholder="Search cases, members, documents..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="pl-10 h-9 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-500"
-              />
-            </div>
 
             <NotificationDropdown />
 
