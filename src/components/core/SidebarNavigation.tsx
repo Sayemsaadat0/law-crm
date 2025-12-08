@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
-  User,
+  // User,
   Settings,
   Scale,
 } from "lucide-react";
@@ -32,11 +32,11 @@ const menuItems = [
     url: "/dashboard/members",
     icon: Users,
   },
-  {
-    title: "Profile",
-    url: "/dashboard/profile",
-    icon: User,
-  },
+  // {
+  //   title: "Profile",
+  //   url: "/dashboard/profile",
+  //   icon: User,
+  // },
   {
     title: "Settings",
     url: "/dashboard/settings",

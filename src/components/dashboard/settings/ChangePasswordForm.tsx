@@ -68,108 +68,112 @@ export default function ChangePasswordForm() {
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 border bg-white p-6 rounded-xl"
-      >
-        {/* Old Password */}
-        <FormField
-          control={form.control}
-          name="oldPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Current Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showOld ? "text" : "password"}
-                    disabled={loading}
-                    placeholder="Enter current password"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowOld(!showOld)}
-                    className="absolute right-3 top-2.5 text-gray-500"
-                  >
-                    {showOld ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* New Password */}
-        <FormField
-          control={form.control}
-          name="newPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>New Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showNew ? "text" : "password"}
-                    disabled={loading}
-                    placeholder="Enter new password"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNew(!showNew)}
-                    className="absolute right-3 top-2.5 text-gray-500"
-                  >
-                    {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Confirm Password */}
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm New Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showConfirm ? "text" : "password"}
-                    disabled={loading}
-                    placeholder="Re-enter new password"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-2.5 text-gray-500"
-                  >
-                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Submit */}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Updating..." : "Update Password"}
-        </Button>
-
-        {/* User Friendly Info */}
-        <p className="text-xs text-gray-500">
-          Make sure your new password is strong and never share it with anyone.
+    <section className="space-y-6 rounded-xl border bg-white p-6">
+      <div>
+        <h2 className="text-xl font-semibold">Change Password</h2>
+        <p className="text-sm text-muted-foreground">
+          Update your account password
         </p>
-      </form>
-    </Form>
+      </div>
+
+      <hr />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+          {/* Old Password */}
+          <FormField
+            control={form.control}
+            name="oldPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Current Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showOld ? "text" : "password"}
+                      disabled={loading}
+                      placeholder="Enter current password"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOld(!showOld)}
+                      className="absolute right-3 top-2.5 text-gray-500"
+                    >
+                      {showOld ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* New Password */}
+          <FormField
+            control={form.control}
+            name="newPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showNew ? "text" : "password"}
+                      disabled={loading}
+                      placeholder="Enter new password"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNew(!showNew)}
+                      className="absolute right-3 top-2.5 text-gray-500"
+                    >
+                      {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Confirm Password */}
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm New Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showConfirm ? "text" : "password"}
+                      disabled={loading}
+                      placeholder="Re-enter new password"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3 top-2.5 text-gray-500"
+                    >
+                      {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Submit */}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={loading}>
+              {loading ? "Updating..." : "Update Password"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </section>
   );
 }
