@@ -247,11 +247,6 @@ export default function CourtCrud() {
           </div>
         </div>
       </div>
-      {/* Court Table */}
-
-      {/* --------------------------
-          CREATE MODAL
-        -------------------------- */}
     </div>
   );
 }

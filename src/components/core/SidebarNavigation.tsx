@@ -78,7 +78,10 @@ export function SidebarNavigation() {
         <SidebarMenu className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.url;
+            // For Cases, check if pathname starts with the URL to include dynamic routes
+            const isActive = item.title === "Cases" 
+              ? location.pathname.startsWith(item.url)
+              : location.pathname === item.url;
 
             return (
               <SidebarMenuItem key={item.title}>

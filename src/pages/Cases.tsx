@@ -34,6 +34,17 @@ export default function CasesPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<TCase | null>(null);
 
+
+  /* 
+1. stage , 
+
+  const data = useGetCasesData(
+    stage: activeTab,
+    search: search,
+    page: page,
+    limit: limit,
+  )
+  */
   const handleNewHearing = (caseData: TCase) => {
     setSelectedCase(caseData);
     setHearingDialogOpen(true);

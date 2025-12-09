@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { dummyMembers } from "@/dummy/dummy.data";
 
 // --------------------------
 // FORM SCHEMA
@@ -22,48 +23,6 @@ const memberSchema = z.object({
 type MemberFormType = z.infer<typeof memberSchema>;
 
 // Dummy member data
-const dummyMembers = [
-  {
-    id: "member-001",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@lawfirm.com",
-    phone: "+880-1712-345678",
-    role: "Lawyers",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  },
-  {
-    id: "member-002",
-    name: "Md. Abdul Karim",
-    email: "abdul.karim@email.com",
-    phone: "+880-1711-234567",
-    role: "Owner",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  },
-  {
-    id: "member-003",
-    name: "Michael Chen",
-    email: "michael.chen@lawfirm.com",
-    phone: "+880-1713-456789",
-    role: "Lawyers",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  },
-  {
-    id: "member-004",
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+880-1714-567890",
-    role: "Admin",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  },
-  {
-    id: "member-005",
-    name: "David Wilson",
-    email: "david.wilson@lawfirm.com",
-    phone: "+880-1715-678901",
-    role: "Admin",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  },
-];
 
 // --------------------------
 // COMPONENT
