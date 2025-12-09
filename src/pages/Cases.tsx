@@ -49,7 +49,7 @@ export default function CasesPage() {
               <TabsTrigger 
                 key={tab.value} 
                 value={tab.value} 
-                className="h-9 w-24 rounded-lg font-semibold transition-all shadow-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 data-[state=active]:bg-[var(--color-primary-green)] data-[state=active]:text-gray-900 data-[state=active]:border-[var(--color-primary-green)] data-[state=active]:shadow-md"
+                className="h-9 w-24 rounded-lg font-semibold transition-all shadow-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:border-primary-green data-[state=active]:shadow-md"
               >
                 {tab.title}
               </TabsTrigger>
@@ -86,38 +86,38 @@ export default function CasesPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-muted/30 border-b border-border">
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <tr className="bg-primary-green border-b border-border">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   SL
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Case Id
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Number of Case
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Previous Date
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Next Date
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Case Stage
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Payment Status
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Client
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Party
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Lawyer
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-black">
                   Actions
                 </th>
               </tr>

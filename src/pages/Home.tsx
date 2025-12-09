@@ -81,41 +81,41 @@ const Home = () => {
       </div>
 
       {/* Upcoming Cases Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div className="bg-blue-100 rounded-xl border border-gray-200 shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Upcoming Cases</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto bg-white">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <tr className="bg-primary-green border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   SL
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Case Id
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Number of Case
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Case Stage
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Payment Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Client
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Party
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
                   Lawyer
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {upcomingCasesList.map((caseItem, index) => {
                 return (
                   <tr
