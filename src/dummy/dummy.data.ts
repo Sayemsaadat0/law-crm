@@ -1,0 +1,77 @@
+import type { TCase } from "@/types/case.type";
+
+export const dummyCase: TCase[] = [{
+    id: "case-001",
+    case_number: "DC-2024-001",
+    file_number: "FILE-2024-001",
+    case_stage: "Active",
+    case_description: "Property dispute involving ancestral land ownership between family members.",
+  
+    court_id: "court-001",
+    court_details: {
+      id: "court-001",
+      name: "District Court - Civil Division",
+      address: "123 Main Street, Dhaka, Bangladesh",
+    },
+  
+    lawyer_id: "lawyer-001",
+    lawyer_details: {
+      id: "lawyer-001",
+      name: "Sarah Johnson",
+      email: "sarah.johnson@lawfirm.com",
+      phone: "+880-1712-345678",
+      address: "456 Legal Avenue, Dhaka, Bangladesh",
+      details: "Senior Advocate with 15 years of experience in civil and property law.",
+      thumbnail: "https://example.com/lawyers/sarah-johnson.jpg",
+    },
+  
+    client_id: "client-001",
+    client_details: {
+      id: "client-001",
+      name: "Md. Abdul Karim",
+      email: "abdul.karim@email.com",
+      phone: "+880-1711-234567",
+      address: "789 Residential Road, Dhaka, Bangladesh",
+      details: "Property owner claiming ownership based on inheritance documents.",
+      thumbnail: "https://example.com/clients/abdul-karim.jpg",
+      account_number: "ACC-1001",
+      account_name: "Abdul Karim",
+      account_id: "CLI-001",
+      description: "Primary client in property dispute case",
+      branch: "Dhaka Main Branch",
+    },
+  
+    party_id: "party-001",
+    party_details: {
+      id: "party-001",
+      name: "Md. Rahman Ali",
+      email: "rahman.ali@email.com",
+      phone: "+880-1713-456789",
+      address: "321 Family Street, Dhaka, Bangladesh",
+      details: "Younger brother claiming equal share of property.",
+      thumbnail: "https://example.com/parties/rahman-ali.jpg",
+    },
+  
+    hearings: [
+      {
+        hearing_date: "2024-08-15",
+        details: "Initial hearing completed, documents submitted and verified by the court.",
+        file: "https://example.com/hearings/hearing-2024-08-15.pdf",
+      },
+      {
+        hearing_date: "2024-09-20",
+        details: "Next hearing scheduled for witness examination and cross-examination.",
+      },
+    ],
+  
+    payments: [
+      {
+        paid_amount: 5000,
+        paid_date: "2024-08-01",
+      },
+      {
+        paid_amount: 3000,
+        paid_date: "2024-09-10",
+      },
+    ],
+  }];

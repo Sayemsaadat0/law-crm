@@ -2,14 +2,16 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNavigation } from "@/components/core/SidebarNavigation";
 import { DashboardNavbar } from "@/components/core/DashboardNavbar";
+import TopLoader from "../shared/TopLoader";
 
 const DashboardLayout = () => {
   return (
     <SidebarProvider>
+      <TopLoader />
       <SidebarNavigation />
-      <SidebarInset className="bg-gradient-to-br from-gray-50 to-gray-100">
+      <SidebarInset className="bg-linear-to-br from-gray-50 to-gray-100">
         <DashboardNavbar />
-        <div className="flex flex-1 flex-col py-4 pr-4">
+        <div className="flex flex-1 flex-col py-4 p-4">
           <Outlet />
         </div>
       </SidebarInset>

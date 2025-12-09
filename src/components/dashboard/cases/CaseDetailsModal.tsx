@@ -117,13 +117,13 @@ export function CaseDetailsModal({
             title="Client Details"
             icon={<User className="w-5 h-5 text-orange-600" />}
           >
-            <Item label="Client Name" value={caseData.client_name} />
-            <Item label="Account ID" value={caseData.account_id} mono />
-            <Item label="Account Number" value={caseData.account_number} mono />
-            <Item label="Account Name" value={caseData.account_name} />
+            <Item label="Client Name" value={caseData.client_details.name} />
+            <Item label="Account ID" value={caseData.client_details.account_id} mono />
+            <Item label="Account Number" value={caseData.client_details.account_number} mono />
+            <Item label="Account Name" value={caseData.client_details.account_name} />
             <Item
               label="Description"
-              value={caseData.client_description}
+              value={caseData.client_details.description}
               full
             />
           </Section>
@@ -133,9 +133,8 @@ export function CaseDetailsModal({
             title="Party Details"
             icon={<Users className="w-5 h-5 text-green-600" />}
           >
-            <Item label="Party Name" value={caseData.party_name} />
-            <Item label="Description" value={caseData.party_description} />
-            <Item label="Notes" value={caseData.party_notes} />
+            <Item label="Party Name" value={caseData.party_details.name} />
+            <Item label="Description" value={caseData.party_details.details} />
           </Section>
 
           {/* HEARINGS */}

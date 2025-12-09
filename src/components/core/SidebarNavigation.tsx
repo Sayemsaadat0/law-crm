@@ -53,19 +53,19 @@ export function SidebarNavigation() {
   const location = useLocation();
 
   return (
-    <Sidebar className="m-4 rounded-xl border max-h-[calc(100vh-32px)] bg-gradient-to-b  from-gray-900 to-gray-800">
-      <Link to="/" className=" p-6 border-b border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="bg-gradient-to-br from-primary/50 to-primary p-2 rounded-lg">
-            <Scale className="w-6 h-6 text-white" />
+    <Sidebar className="m-2 rounded-xl bg-[#1F2937] border border-gray-700/50 shadow-xl max-h-[calc(100vh-16px)]">
+      <Link to="/" className="p-4 border-b border-gray-700/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-green shadow-lg">
+            <Scale className="w-5 h-5 text-black" />
           </div>
           <div>
-            <h1 className="text-white font-bold text-lg">LegalCase</h1>
-            <p className="text-gray-400 text-xs">Case Management</p>
+            <h1 className="text-sm font-bold text-white">LegalCase</h1>
+            <p className="text-xs text-gray-400">Case Management</p>
           </div>
         </div>
       </Link>
-      <SidebarContent className="px-4 py-3">
+      <SidebarContent className="px-3 py-4">
         <SidebarMenu className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -77,15 +77,21 @@ export function SidebarNavigation() {
                   asChild
                   isActive={isActive}
                   className={cn(
-                    "h-12 px-3 rounded-lg",
+                    "h-11 px-3 rounded-lg transition-all duration-200",
                     isActive
-                      ? "bg-primary text-white"
-                      : "text-white hover:bg-gray-600"
+                      ? "bg-primary-green text-black shadow-md"
+                      : "text-gray-300 hover:bg-primary-green hover:text-black"
                   )}
                 >
                   <Link to={item.url} className="flex items-center gap-3">
-                    <Icon strokeWidth={2.7} className="h-6 w-6" />
-                    <span className="text-lg">{item.title}</span>
+                    <Icon
+                      strokeWidth={2.5}
+                      className={cn(
+                        "h-5 w-5 transition-colors",
+                        isActive ? "text-white" : "text-gray-400"
+                      )}
+                    />
+                    <span className="text-sm font-medium">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
