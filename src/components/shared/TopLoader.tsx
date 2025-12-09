@@ -18,7 +18,7 @@ const TopLoader = () => {
     return () => clearTimeout(timer);
   }, [location]);
 
-  return <LoadingBar color="#29d" ref={ref} />;
+  return <LoadingBar color="#d8f275" ref={ref} />;
 };
 
 export default TopLoader;

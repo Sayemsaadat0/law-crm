@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Checkbox } from "@/components/ui/checkbox";
+import { dummyCourts } from "@/dummy/dummy.data";
 
 // --------------------------
 // FORM SCHEMA
@@ -21,40 +22,6 @@ const courtSchema = z.object({
 });
 
 type CourtFormType = z.infer<typeof courtSchema>;
-
-// Dummy court data
-const dummyCourts = [
-  {
-    id: "court-001",
-    name: "District Court - Civil Division",
-    address: "123 Main Street, Dhaka, Bangladesh",
-    status: "Active",
-  },
-  {
-    id: "court-002",
-    name: "High Court - Criminal Division",
-    address: "456 Justice Avenue, Dhaka, Bangladesh",
-    status: "Active",
-  },
-  {
-    id: "court-003",
-    name: "Supreme Court",
-    address: "789 Legal Plaza, Dhaka, Bangladesh",
-    status: "Active",
-  },
-  {
-    id: "court-004",
-    name: "Family Court",
-    address: "321 Family Road, Chattogram, Bangladesh",
-    status: "Active",
-  },
-  {
-    id: "court-005",
-    name: "Commercial Court",
-    address: "654 Business District, Sylhet, Bangladesh",
-    status: "Inactive",
-  },
-];
 
 // --------------------------
 // COMPONENT

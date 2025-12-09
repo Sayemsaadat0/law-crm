@@ -9,9 +9,9 @@ const DashboardLayout = () => {
     <SidebarProvider>
       <TopLoader />
       <SidebarNavigation />
-      <SidebarInset className="bg-linear-to-br from-gray-50 to-gray-100">
+      <SidebarInset className="bg-linear-to-br py-5  pr-7 from-gray-50 to-gray-100">
         <DashboardNavbar />
-        <div className="flex flex-1 flex-col py-4 p-4">
+        <div className="flex flex-1 flex-col py-4">
           <Outlet />
         </div>
       </SidebarInset>

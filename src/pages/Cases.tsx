@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CaseStageBadge } from "@/components/dashboard/cases/CaseStageBadge";
 import { CaseActionDropdown } from "@/components/dashboard/cases/CaseActionDropdown";
@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { dummyCase } from "@/dummy/dummy.data";
+import HearingForm from "@/components/pageComponent/cases/HearingForm";
+import PaymentForm from "@/components/pageComponent/cases/PaymentForm";
+import type { TCase } from "@/types/case.type";
 
 // Tab array with title and value
 const caseTabs = [
@@ -25,7 +28,25 @@ const caseTabs = [
 ];
 
 export default function CasesPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("");
+  const [hearingDialogOpen, setHearingDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<TCase | null>(null);
+
+  const handleNewHearing = (caseData: TCase) => {
+    setSelectedCase(caseData);
+    setHearingDialogOpen(true);
+  };
+
+  const handleReceivePayment = (caseData: TCase) => {
+    setSelectedCase(caseData);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleViewCase = (caseData: TCase) => {
+    navigate(`/dashboard/cases/${caseData.id}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -44,12 +65,12 @@ export default function CasesPage() {
       <div className="flex items-center justify-between gap-4">
         {/* Left Side - Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-          <TabsList className="h-9 bg-transparent p-0 gap-2">
+          <TabsList className="h-10 bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 gap-1.5">
             {caseTabs.map((tab) => (
               <TabsTrigger 
                 key={tab.value} 
                 value={tab.value} 
-                className="h-9 w-24 rounded-lg font-semibold transition-all shadow-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:border-primary-green data-[state=active]:shadow-md"
+                className="h-8 px-4 rounded-lg font-medium text-sm transition-all bg-transparent text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:shadow-sm"
               >
                 {tab.title}
               </TabsTrigger>
@@ -136,7 +157,10 @@ export default function CasesPage() {
                     </td>
 
                     <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5">
+                      <Link
+                        to={`/dashboard/cases/${caseItem.id}`}
+                        className="flex items-center gap-1.5 hover:text-primary-green transition-colors cursor-pointer"
+                      >
                         <div>
                           <p className="text-xs font-medium">
                             {caseItem.case_number}
@@ -145,7 +169,7 @@ export default function CasesPage() {
                             {caseItem.file_number}
                           </p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
 
                     <td className="px-3 py-2.5">
@@ -195,10 +219,10 @@ export default function CasesPage() {
                       <div className="flex items-center justify-center">
                         <CaseActionDropdown
                           caseData={caseItem}
-                          onView={() => {}}
+                          onView={handleViewCase}
                           onEdit={() => {}}
-                          onReceivePayment={() => {}}
-                          onNewHearing={() => {}}
+                          onReceivePayment={handleReceivePayment}
+                          onNewHearing={handleNewHearing}
                         />
                       </div>
                     </td>
@@ -209,6 +233,29 @@ export default function CasesPage() {
           </table>
         </div>
       </div>
+
+      {/* Hearing Form Dialog */}
+      {selectedCase && (
+        <HearingForm
+          open={hearingDialogOpen}
+          onOpenChange={setHearingDialogOpen}
+          caseId={selectedCase.id}
+          caseNumber={selectedCase.case_number}
+          fileNumber={selectedCase.file_number}
+        />
+      )}
+
+      {/* Payment Form Dialog */}
+      {selectedCase && (
+        <PaymentForm
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          hearings={selectedCase.hearings}
+          caseId={selectedCase.id}
+          caseNumber={selectedCase.case_number}
+          fileNumber={selectedCase.file_number}
+        />
+      )}
     </div>
   );
 }

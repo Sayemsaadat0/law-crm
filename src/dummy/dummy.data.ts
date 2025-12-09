@@ -1,5 +1,47 @@
 import type { TCase } from "@/types/case.type";
 
+// Court type
+export type TCourt = {
+  id: string;
+  name: string;
+  address: string;
+  status: "Active" | "Inactive";
+};
+
+// Dummy court data
+export const dummyCourts: TCourt[] = [
+  {
+    id: "court-001",
+    name: "District Court - Civil Division",
+    address: "123 Main Street, Dhaka, Bangladesh",
+    status: "Active",
+  },
+  {
+    id: "court-002",
+    name: "High Court - Criminal Division",
+    address: "456 Justice Avenue, Dhaka, Bangladesh",
+    status: "Active",
+  },
+  {
+    id: "court-003",
+    name: "Supreme Court",
+    address: "789 Legal Plaza, Dhaka, Bangladesh",
+    status: "Active",
+  },
+  {
+    id: "court-004",
+    name: "Family Court",
+    address: "321 Family Road, Chattogram, Bangladesh",
+    status: "Active",
+  },
+  {
+    id: "court-005",
+    name: "Commercial Court",
+    address: "654 Business District, Sylhet, Bangladesh",
+    status: "Inactive",
+  },
+];
+
 export const dummyCase: TCase[] = [{
     id: "case-001",
     case_number: "DC-2024-001",

@@ -1,11 +1,11 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Briefcase,
   Users,
-  // User,
-  Settings,
+  User,
   Scale,
+  LogOut,
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,15 +32,10 @@ const menuItems = [
     url: "/dashboard/members",
     icon: Users,
   },
-  // {
-  //   title: "Profile",
-  //   url: "/dashboard/profile",
-  //   icon: User,
-  // },
   {
-    title: "Settings",
-    url: "/dashboard/settings",
-    icon: Settings,
+    title: "Profile",
+    url: "/dashboard/profile",
+    icon: User,
   },
   {
     title: "Courts",
@@ -51,9 +46,23 @@ const menuItems = [
 
 export function SidebarNavigation() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Dummy user data - replace with actual user data from context/state
+  const userData = {
+    name: "Sarah Johnson",
+    email: "sarah.johnson@lawfirm.com",
+    role: "Admin",
+    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
+  };
+
+  const handleLogout = () => {
+    // Add logout logic here (clear tokens, etc.)
+    navigate("/login");
+  };
 
   return (
-    <Sidebar className="m-2 rounded-xl bg-[#1F2937] border border-gray-700/50 shadow-xl max-h-[calc(100vh-16px)]">
+    <Sidebar className="m-2 rounded-xl max-w-[250px] bg-[#1F2937] border border-gray-700/50 shadow-xl max-h-[calc(100vh-16px)] flex flex-col">
       <Link to="/" className="p-4 border-b border-gray-700/50">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-green shadow-lg">
@@ -65,7 +74,7 @@ export function SidebarNavigation() {
           </div>
         </div>
       </Link>
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="px-3 py-4 flex-1">
         <SidebarMenu className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -99,6 +108,40 @@ export function SidebarNavigation() {
           })}
         </SidebarMenu>
       </SidebarContent>
+      
+      {/* User Info Card */}
+      <div className="p-3 border-t border-gray-700/50">
+        <div className="w-full min-h-[40px] bg-gray-800/50 rounded-lg p-3 flex items-center gap-3">
+          {/* User Thumbnail */}
+          <img
+            src={userData.thumbnail}
+            alt={userData.name}
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          />
+          
+          {/* User Info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">
+              {userData.name}
+            </p>
+            <p className="text-xs text-gray-400 truncate">
+              {userData.email}
+            </p>
+            <p className="text-xs text-primary-green font-medium mt-0.5">
+              {userData.role}
+            </p>
+          </div>
+          
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors flex-shrink-0"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </Sidebar>
   );
 }
