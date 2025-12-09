@@ -1,23 +1,85 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { Plus, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CaseStageBadge } from "@/components/dashboard/cases/CaseStageBadge";
 import { CaseActionDropdown } from "@/components/dashboard/cases/CaseActionDropdown";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { dummyCase } from "@/dummy/dummy.data";
 
+// Tab array with title and value
+const caseTabs = [
+  { title: "All", value: "" },
+  { title: "Active", value: "active" },
+  { title: "Disposed", value: "disposed" },
+  { title: "Archive", value: "archive" },
+];
+
 export default function CasesPage() {
+  const [activeTab, setActiveTab] = useState("");
+
   return (
-    <div className="space-y-3">
-      {/* Top Actions */}
-      <div className="flex items-center justify-end gap-2">
+    <div className="space-y-6">
+      {/* Title and Add Case Button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Case Management</h1>
         <Link to="/dashboard/cases/create">
-          <Button className="h-8 px-3 text-xs bg-primary hover:bg-primary/90 flex items-center gap-1.5">
+          <Button className="h-8 px-3 text-xs text-black bg-primary-green hover:bg-primary-green/90 flex items-center gap-1.5">
             <Plus className="w-3.5 h-3.5" />
             <span>Add Case</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Tabs and Filters Section */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Left Side - Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+          <TabsList className="h-9 bg-transparent p-0 gap-2">
+            {caseTabs.map((tab) => (
+              <TabsTrigger 
+                key={tab.value} 
+                value={tab.value} 
+                className="h-9 w-24 rounded-lg font-semibold transition-all shadow-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 data-[state=active]:bg-[var(--color-primary-green)] data-[state=active]:text-gray-900 data-[state=active]:border-[var(--color-primary-green)] data-[state=active]:shadow-md"
+              >
+                {tab.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        {/* Right Side - Select and Search */}
+        <div className="flex items-center gap-3">
+          <Select defaultValue="all">
+            <SelectTrigger className="w-[180px] h-9 py-2">
+              <SelectValue placeholder="Case Stage" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stages</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="disposed">Disposed</SelectItem>
+              <SelectItem value="left">Left</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search cases..."
+              className="pl-10 pr-4 py-2 w-64 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary h-9"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="bg-background rounded-lg border border-border shadow-sm">
@@ -75,7 +137,6 @@ export default function CasesPage() {
 
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
                         <div>
                           <p className="text-xs font-medium">
                             {caseItem.case_number}

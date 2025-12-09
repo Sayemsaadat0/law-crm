@@ -77,7 +77,7 @@ export function SidebarNavigation() {
                   asChild
                   isActive={isActive}
                   className={cn(
-                    "h-11 px-3 rounded-lg transition-all duration-200",
+                    "h-11 px-3 rounded-lg group transition-all duration-200",
                     isActive
                       ? "bg-primary-green text-black shadow-md"
                       : "text-gray-300 hover:bg-primary-green hover:text-black"
@@ -88,7 +88,7 @@ export function SidebarNavigation() {
                       strokeWidth={2.5}
                       className={cn(
                         "h-5 w-5 transition-colors",
-                        isActive ? "text-white" : "text-gray-400"
+                        isActive ? "text-black" : "text-gray-500"
                       )}
                     />
                     <span className="text-sm font-medium">{item.title}</span>
