@@ -96,13 +96,25 @@ export const dummyCase: TCase[] = [{
   
     hearings: [
       {
-        hearing_date: "2024-08-15",
-        details: "Initial hearing completed, documents submitted and verified by the court.",
-        file: "https://example.com/hearings/hearing-2024-08-15.pdf",
+        title: "Evidence Submission Hearing",
+        serial_no: "HE-001",
+        hearing_date: "2025-12-12",
+        details: "Evidence submission hearing. Additional evidence and expert opinions were presented.",
+        file: "https://example.com/files/hearing-evidence-001.pdf",
       },
       {
-        hearing_date: "2024-09-20",
-        details: "Next hearing scheduled for witness examination and cross-examination.",
+        title: "Witness Examination Session",
+        serial_no: "HE-002",
+        hearing_date: new Date().toISOString().split('T')[0],
+        details: "Current hearing scheduled for today. Witness examination and cross-examination session.",
+        file: "https://example.com/files/hearing-witness-002.pdf",
+      },
+      {
+        title: "Final Arguments Hearing",
+        serial_no: "HE-003",
+        hearing_date: "2025-01-15",
+        details: "Next hearing scheduled for final arguments from both parties.",
+        file: "https://example.com/files/hearing-arguments-003.pdf",
       },
     ],
   
@@ -114,6 +126,10 @@ export const dummyCase: TCase[] = [{
       {
         paid_amount: 3000,
         paid_date: "2024-09-10",
+      },
+      {
+        paid_amount: 4000,
+        paid_date: "2024-10-15",
       },
     ],
   }];

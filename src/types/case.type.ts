@@ -1,6 +1,8 @@
 export type TCaseStage = "Disposed" | "Left" | "Active";
 
 export type Hearing = {
+  title: string;
+  serial_no: string;
   hearing_date: string; // ISO date string (yyyy-mm-dd)
   details: string;
   file?: string; // file URL (optional)

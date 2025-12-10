@@ -18,8 +18,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const hearingSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  serial_no: z.string().min(1, "Serial number is required"),
   date: z.string().min(1, "Date is required"),
-  serial_number: z.string().optional(),
   note: z.string().min(1, "Note is required"),
   file: z.instanceof(File).optional(),
 });
@@ -27,8 +28,9 @@ const hearingSchema = z.object({
 type HearingFormData = z.infer<typeof hearingSchema>;
 
 interface HearingInstance {
+  title: string;
+  serial_no: string;
   date: string;
-  serial_number?: string;
   note: string;
   file?: string;
 }
@@ -56,13 +58,15 @@ const HearingForm = ({
     resolver: zodResolver(hearingSchema),
     defaultValues: instance
       ? {
+          title: instance.title,
+          serial_no: instance.serial_no,
           date: instance.date,
-          serial_number: instance.serial_number || "",
           note: instance.note,
         }
       : {
+          title: "",
+          serial_no: "",
           date: "",
-          serial_number: "",
           note: "",
         },
   });
@@ -70,10 +74,9 @@ const HearingForm = ({
   const onSubmit = (data: HearingFormData) => {
     try {
       const formData = new FormData();
+      formData.append("title", data.title);
+      formData.append("serial_no", data.serial_no);
       formData.append("date", data.date);
-      if (data.serial_number) {
-        formData.append("serial_number", data.serial_number);
-      }
       formData.append("note", data.note);
       if (data.file) {
         formData.append("file", data.file);
@@ -119,6 +122,42 @@ const HearingForm = ({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="hearing-title" className="text-sm font-medium text-gray-700">
+              Title
+            </Label>
+            <Input
+              id="hearing-title"
+              placeholder="Enter hearing title"
+              className="w-full h-10"
+              {...form.register("title")}
+            />
+            {form.formState.errors.title && (
+              <p className="text-xs text-red-500 mt-1">
+                {form.formState.errors.title.message}
+              </p>
+            )}
+          </div>
+
+          {/* Serial Number */}
+          <div className="space-y-2">
+            <Label htmlFor="hearing-serial" className="text-sm font-medium text-gray-700">
+              Serial Number
+            </Label>
+            <Input
+              id="hearing-serial"
+              placeholder="Enter serial number"
+              className="w-full h-10"
+              {...form.register("serial_no")}
+            />
+            {form.formState.errors.serial_no && (
+              <p className="text-xs text-red-500 mt-1">
+                {form.formState.errors.serial_no.message}
+              </p>
+            )}
+          </div>
+
           {/* Date */}
           <div className="space-y-2">
             <Label htmlFor="hearing-date" className="text-sm font-medium text-gray-700">
@@ -133,24 +172,6 @@ const HearingForm = ({
             {form.formState.errors.date && (
               <p className="text-xs text-red-500 mt-1">
                 {form.formState.errors.date.message}
-              </p>
-            )}
-          </div>
-
-          {/* Serial Number (Optional) */}
-          <div className="space-y-2">
-            <Label htmlFor="hearing-serial" className="text-sm font-medium text-gray-700">
-              Serial Number <span className="text-gray-400">(Optional)</span>
-            </Label>
-            <Input
-              id="hearing-serial"
-              placeholder="Enter serial number"
-              className="w-full h-10"
-              {...form.register("serial_number")}
-            />
-            {form.formState.errors.serial_number && (
-              <p className="text-xs text-red-500 mt-1">
-                {form.formState.errors.serial_number.message}
               </p>
             )}
           </div>

@@ -99,12 +99,10 @@ const PaymentForm = ({
   };
 
   // Format hearing for display in select
-  const formatHearingOption = (hearing: Hearing, index: number) => {
-    const hearingId = `HEARING-${String(index + 1).padStart(3, "0")}`;
+  const formatHearingOption = (hearing: Hearing) => {
     const date = new Date(hearing.hearing_date).toLocaleDateString();
-    // Format: HEARING-001 - Date - Serial (if available)
-    // Note: serial_number would need to be added to Hearing type or passed separately
-    return `${hearingId} - ${date}`;
+    // Format: Serial No - Title - Date
+    return `${hearing.serial_no} - ${hearing.title} - ${date}`;
   };
 
   return (
@@ -164,7 +162,7 @@ const PaymentForm = ({
                 ) : (
                   hearings.map((hearing, index) => {
                     const hearingId = `hearing-${index}`;
-                    const displayText = formatHearingOption(hearing, index);
+                    const displayText = formatHearingOption(hearing);
                     return (
                       <SelectItem key={hearingId} value={hearingId}>
                         {displayText}
