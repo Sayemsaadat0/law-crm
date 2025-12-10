@@ -32,11 +32,7 @@
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.68.0",
     "react-router-dom": "^7.9.5",
-<<<<<<< HEAD
-    "recharts": "^3.5.1",
-=======
     "react-top-loading-bar": "^3.0.2",
->>>>>>> 74755250fdea6b50d75965c8926a8f5e0362d65f
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "yup": "^1.7.1",
