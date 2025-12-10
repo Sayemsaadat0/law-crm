@@ -1,11 +1,11 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Briefcase,
   Users,
   User,
-  Settings,
   Scale,
+  LogOut,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,11 +38,6 @@ const menuItems = [
     icon: User,
   },
   {
-    title: "Settings",
-    url: "/dashboard/settings",
-    icon: Settings,
-  },
-  {
     title: "Courts",
     url: "/dashboard/courts",
     icon: Scale,
@@ -51,21 +46,42 @@ const menuItems = [
 
 export function SidebarNavigation() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Dummy user data - replace with actual user data from context/state
+  const userData = {
+    name: "Sarah Johnson",
+    email: "sarah.johnson@lawfirm.com",
+    role: "Admin",
+    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
+  };
+
+  const handleLogout = () => {
+    // Add logout logic here (clear tokens, etc.)
+    navigate("/login");
+  };
 
   return (
-    <Sidebar className="m-4 rounded-xl border max-h-[calc(100vh-32px)] bg-white">
-      <Link
-        to="/"
-        className="flex items-center justify-center gap-3 w-full p-4"
-      >
-        <Scale className="h-5 w-5 text-black" />
-        <span className="font-semibold text-lg text-black">Law Firm</span>
+    <Sidebar className="m-2 rounded-xl max-w-[250px] bg-[#1F2937] border border-gray-700/50 shadow-xl max-h-[calc(100vh-16px)] flex flex-col">
+      <Link to="/" className="p-4 border-b border-gray-700/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-green shadow-lg">
+            <Scale className="w-5 h-5 text-black" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white">LegalCase</h1>
+            <p className="text-xs text-gray-400">Case Management</p>
+          </div>
+        </div>
       </Link>
-      <SidebarContent className="px-4 py-3">
+      <SidebarContent className="px-3 py-4 flex-1">
         <SidebarMenu className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.url;
+            // For Cases, check if pathname starts with the URL to include dynamic routes
+            const isActive = item.title === "Cases" 
+              ? location.pathname.startsWith(item.url)
+              : location.pathname === item.url;
 
             return (
               <SidebarMenuItem key={item.title}>
@@ -73,15 +89,21 @@ export function SidebarNavigation() {
                   asChild
                   isActive={isActive}
                   className={cn(
-                    "h-12 px-3 rounded-lg",
+                    "h-11 px-3 rounded-lg group transition-all duration-200",
                     isActive
-                      ? "bg-purple-600 text-white"
-                      : "text-black hover:bg-gray-100"
+                      ? "bg-primary-green text-black shadow-md"
+                      : "text-gray-300 hover:bg-primary-green hover:text-black"
                   )}
                 >
                   <Link to={item.url} className="flex items-center gap-3">
-                    <Icon strokeWidth={2.7} className="h-6 w-6" />
-                    <span className="text-lg">{item.title}</span>
+                    <Icon
+                      strokeWidth={2.5}
+                      className={cn(
+                        "h-5 w-5 transition-colors",
+                        isActive ? "text-black" : "text-gray-500"
+                      )}
+                    />
+                    <span className="text-sm font-medium">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -89,6 +111,40 @@ export function SidebarNavigation() {
           })}
         </SidebarMenu>
       </SidebarContent>
+      
+      {/* User Info Card */}
+      <div className="p-3 border-t border-gray-700/50">
+        <div className="w-full min-h-[40px] bg-gray-800/50 rounded-lg p-3 flex items-center gap-3">
+          {/* User Thumbnail */}
+          <img
+            src={userData.thumbnail}
+            alt={userData.name}
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          />
+          
+          {/* User Info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">
+              {userData.name}
+            </p>
+            <p className="text-xs text-gray-400 truncate">
+              {userData.email}
+            </p>
+            <p className="text-xs text-primary-green font-medium mt-0.5">
+              {userData.role}
+            </p>
+          </div>
+          
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors flex-shrink-0"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </Sidebar>
   );
 }

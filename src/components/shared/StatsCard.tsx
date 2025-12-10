@@ -24,7 +24,7 @@ export function StatsCard({
           <p className="text-sm text-gray-500">{title}</p>
           <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
         </div>
-        <div className="rounded-xl bg-primary p-3 text-white">{icon}</div>
+        {icon}
       </div>
       <hr className="my-2" />
       <p className="p-4 text-sm text-gray-500">

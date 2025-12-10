@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Eye, EyeOff, Zap } from "lucide-react";
+import { Eye, EyeOff, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,20 +45,25 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md space-y-8">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <Zap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">LOGO</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary-green shadow-lg">
+              <Scale className="w-6 h-6 text-gray-900" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">LegalCase</h1>
+              <p className="text-xs text-gray-500">Case Management</p>
+            </div>
           </div>
 
           {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome Back to Leagle.
+              Welcome Back
             </h1>
-            <p className="text-gray-600">Login to continue</p>
+            <p className="text-gray-600">Login to continue to your account</p>
           </div>
 
           {/* Login Form */}
@@ -73,7 +77,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="Enter your email"
-                className="h-12 px-4 border-gray-200 focus:border-primary"
+                className="h-12 px-4 border-gray-300 focus:border-primary-green focus:ring-primary-green/20"
                 {...register("email")}
               />
               {errors.email && (
@@ -91,13 +95,13 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  className="h-12 px-4 pr-12 border-gray-200 focus:border-primary"
+                  className="h-12 px-4 pr-12 border-gray-300 focus:border-primary-green focus:ring-primary-green/20"
                   {...register("password")}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-green transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -116,7 +120,7 @@ export default function LoginPage() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-12 font-medium rounded-lg"
+              className="w-full h-12 font-medium rounded-lg bg-primary-green hover:bg-primary-green/90 text-gray-900 shadow-md hover:shadow-lg transition-all"
             >
               Login
             </Button>
