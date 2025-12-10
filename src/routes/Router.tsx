@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Courts from "@/pages/Courts";
 import ComingSoon from "@/pages/ComingSoon";
+import CaseCreateContainer from "@/components/dashboard/cases/create/CaseCreateContainer";
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const Home = lazy(() => import("../pages/Home"));
 const Cases = lazy(() => import("../pages/Cases"));
@@ -54,7 +55,7 @@ const router = createBrowserRouter([
       },
       {
         path: "cases/create",
-        element: <ComingSoon />,
+        element: <CaseCreateContainer />,
       },
       {
         path: "cases/edit/:id",

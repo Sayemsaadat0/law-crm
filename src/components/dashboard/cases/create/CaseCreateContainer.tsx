@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import CaseBasicInfoForm from "./CaseBasicInfoForm";
+import CaseClientForm from "./CaseClientForm";
+import CasePartyForm from "./CasePartyForm";
+
+type TabValue = "basic" | "client" | "party";
+
+function CaseCreateContainer() {
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<TabValue>("basic");
+
+  const handleStepComplete = () => {
+    if (currentStep < 3) {
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      
+      // Move to next tab
+      const tabMap: Record<number, TabValue> = {
+        1: "basic",
+        2: "client",
+        3: "party",
+      };
+      setActiveTab(tabMap[nextStep]);
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    const tabValue = value as TabValue;
+    const stepMap: Record<TabValue, number> = {
+      basic: 1,
+      client: 2,
+      party: 3,
+    };
+    
+    const targetStep = stepMap[tabValue];
+    
+    // Only allow switching to tabs that are <= currentStep
+    if (targetStep <= currentStep) {
+      setActiveTab(tabValue);
+    }
+  };
+
+  const isStepActive = (step: number) => {
+    const tabMap: Record<number, TabValue> = {
+      1: "basic",
+      2: "client",
+      3: "party",
+    };
+    return activeTab === tabMap[step];
+  };
+
+  return (
+    <div>
+      <div className="w-full flex flex-col items-center">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="">
+          <TabsList className="w-full min-w-[500px] max-w-[600px] h-11 bg-white rounded-xl shadow-sm border border-gray-200 p-1 gap-1 mb-6 inline-flex">
+            <TabsTrigger 
+              value="basic"
+              disabled={currentStep < 1}
+              className="h-9 flex-1 px-4 rounded-lg font-medium text-sm transition-all bg-transparent text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger 
+              value="client"
+              disabled={currentStep < 2}
+              className="h-9 flex-1 px-4 rounded-lg font-medium text-sm transition-all bg-transparent text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Client
+            </TabsTrigger>
+            <TabsTrigger 
+              value="party"
+              disabled={currentStep < 3}
+              className="h-9 flex-1 px-4 rounded-lg font-medium text-sm transition-all bg-transparent text-gray-700 hover:bg-gray-50 data-[state=active]:bg-primary-green data-[state=active]:text-gray-900 data-[state=active]:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Party
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="basic" className="mt-0 bg-white p-5 shadow-sm rounded-xl min-w-[500px] max-w-[600px]">
+            <div className="rounded-xl">
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Case Primary Information</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter the case primary information for Initial Setup</p>
+              </div>
+              <CaseBasicInfoForm 
+                isActive={isStepActive(1)}
+                onStepComplete={handleStepComplete}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="client" className="mt-0 bg-white p-5 shadow-sm rounded-xl min-w-[500px] max-w-[600px]">
+            <div className="rounded-xl">
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Client Information</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter the client details and billing information</p>
+              </div>
+              <CaseClientForm 
+                isActive={isStepActive(2)}
+                onStepComplete={handleStepComplete}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="party" className="mt-0 bg-white p-5 shadow-sm rounded-xl min-w-[500px] max-w-[600px]">
+            <div className="rounded-xl">
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Party Information</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter the party details and reference information</p>
+              </div>
+              <CasePartyForm 
+                isActive={isStepActive(3)}
+                onStepComplete={handleStepComplete}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+export default CaseCreateContainer;
