@@ -3,6 +3,21 @@
 import { FileText, Calendar, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { dummyCase } from "@/dummy/dummy.data";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const Home = () => {
   // Get stage badge style
@@ -15,6 +30,67 @@ const Home = () => {
       return "bg-orange-100 text-orange-800 border-orange-200";
     }
   };
+
+  // Process data for Case Stage Pie Chart
+  const caseStageData = dummyCase.reduce((acc, caseItem) => {
+    const stage = caseItem.case_stage;
+    const existing = acc.find((item) => item.name === stage);
+    if (existing) {
+      existing.value += 1;
+    } else {
+      acc.push({ name: stage, value: 1 });
+    }
+    return acc;
+  }, [] as { name: string; value: number }[]);
+
+  const PIE_COLORS = ["#3b82f6", "#ef4444", "#f97316", "#10b981"];
+
+  // Process data for Cases by Court Bar Chart
+  const casesByCourt = dummyCase.reduce((acc, caseItem) => {
+    const courtName = caseItem.court_details.name;
+    const existing = acc.find((item) => item.name === courtName);
+    if (existing) {
+      existing.cases += 1;
+    } else {
+      acc.push({ name: courtName, cases: 1 });
+    }
+    return acc;
+  }, [] as { name: string; cases: number }[]);
+
+  // Process data for Cases by Lawyer Bar Chart
+  const casesByLawyer = dummyCase.reduce((acc, caseItem) => {
+    const lawyerName = caseItem.lawyer_details.name;
+    const existing = acc.find((item) => item.name === lawyerName);
+    if (existing) {
+      existing.cases += 1;
+    } else {
+      acc.push({ name: lawyerName, cases: 1 });
+    }
+    return acc;
+  }, [] as { name: string; cases: number }[]);
+
+  // Process data for Monthly Revenue Line Chart
+  const monthlyRevenue = dummyCase.reduce((acc, caseItem) => {
+    caseItem.payments.forEach((payment) => {
+      const date = new Date(payment.paid_date);
+      const month = date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+      const existing = acc.find((item) => item.month === month);
+      if (existing) {
+        existing.revenue += payment.paid_amount;
+      } else {
+        acc.push({ month, revenue: payment.paid_amount, date: date.getTime() });
+      }
+    });
+    return acc;
+  }, [] as { month: string; revenue: number; date: number }[]);
+
+  // Sort monthly revenue by date
+  monthlyRevenue.sort((a, b) => {
+    return a.date - b.date;
+  });
 
   return (
     <div className="space-y-6">
@@ -117,6 +193,99 @@ const Home = () => {
           {/* Shine Effect */}
           <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
         </Link>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Case Stage Distribution - Pie Chart */}
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Case Stage Distribution</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={caseStageData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) =>
+                  `${name}: ${(percent * 100).toFixed(0)}%`
+                }
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {caseStageData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={PIE_COLORS[index % PIE_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Cases by Court - Bar Chart */}
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Cases by Court</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={casesByCourt}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                fontSize={12}
+              />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="cases" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Monthly Revenue - Line Chart */}
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Monthly Revenue</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip
+                formatter={(value: number) => `৳${value.toLocaleString()}`}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#10b981"
+                strokeWidth={3}
+                dot={{ fill: "#10b981", r: 5 }}
+                activeDot={{ r: 8 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Cases by Lawyer - Bar Chart */}
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Cases by Lawyer</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={casesByLawyer}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="cases" fill="#f97316" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Upcoming Cases Table - Full Width */}
