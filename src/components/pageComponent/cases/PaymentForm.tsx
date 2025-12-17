@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,13 +23,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { Hearing } from "@/types/case.type";
+import { casePaymentsApi } from "@/lib/api";
 
 const paymentSchema = z.object({
   date: z.string().min(1, "Date is required"),
-  payment_for_hearing: z.string().min(1, "Please select a hearing"),
+  payment_for_hearing: z.string().optional(), // optional, backend allows nullable
   amount: z.string().min(1, "Amount is required").refine(
-    (val) => !isNaN(Number(val)) && Number(val) > 0,
-    "Amount must be a positive number"
+    (val) => !isNaN(Number(val)) && Number(val) >= 0,
+    "Amount must be a non-negative number"
   ),
 });
 
@@ -48,6 +50,7 @@ interface PaymentFormProps {
   caseId?: string;
   caseNumber?: string;
   fileNumber?: string;
+  onCreated?: () => void;
 }
 
 const PaymentForm = ({
@@ -58,7 +61,10 @@ const PaymentForm = ({
   caseId,
   caseNumber,
   fileNumber,
+  onCreated,
 }: PaymentFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: instance
@@ -74,27 +80,57 @@ const PaymentForm = ({
         },
   });
 
-  const onSubmit = (data: PaymentFormData) => {
+  const onSubmit = async (data: PaymentFormData) => {
+    let toastId: string | number | undefined;
     try {
-      // Not submitting as FormData, just regular object
-      const paymentData = {
+      if (!caseId) {
+        toast.error("Case information not found.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      toastId = toast.loading("Saving payment...");
+
+      // Map selected hearing option back to case_hearing_id (we use index-based id in value)
+      let caseHearingId: number | undefined;
+      if (data.payment_for_hearing) {
+        const index = parseInt(data.payment_for_hearing.replace("hearing-", ""), 10);
+        const hearing = hearings[index];
+        if (hearing) {
+          // In our TCase.hearings we don't store id, only serial_no; backend expects case_hearing_id (id)
+          // If you extend Hearing type with `id`, you can map it directly here.
+          // For now we'll send undefined, and backend will still accept it because case_hearing_id is nullable.
+          caseHearingId = (hearing as any).id ? Number((hearing as any).id) : undefined;
+        }
+      }
+
+      await casePaymentsApi.create({
         date: data.date,
-        payment_for_hearing: data.payment_for_hearing,
         amount: Number(data.amount),
-        case_id: caseId,
-      };
+        case_id: Number(caseId),
+        case_hearing_id: caseHearingId,
+      });
 
-      console.log("Payment Data:", paymentData);
-      console.log("Is Update:", !!instance);
+      if (toastId !== undefined) {
+        toast.success("Payment created successfully!", { id: toastId });
+      } else {
+        toast.success("Payment created successfully!");
+      }
 
-      toast.success(
-        instance ? "Payment updated successfully!" : "Payment created successfully!"
-      );
       form.reset();
       onOpenChange(false);
+      if (onCreated) {
+        onCreated();
+      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong!";
-      toast.error(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : "Failed to save payment";
+      if (toastId !== undefined) {
+        toast.error(errorMessage, { id: toastId });
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -213,9 +249,10 @@ const PaymentForm = ({
             </Button>
             <Button
               type="submit"
-              className="bg-primary-green hover:bg-primary-green/90 text-gray-900"
+              disabled={isSubmitting}
+              className="bg-primary-green hover:bg-primary-green/90 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {instance ? "Update" : "Create"}
+              {isSubmitting ? "Saving..." : instance ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </form>

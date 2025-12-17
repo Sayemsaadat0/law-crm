@@ -52,6 +52,8 @@ export type PartyDetails = {
   address: string;
   details: string;
   thumbnail: string;
+  // Optional reference field for opposite party (used in edit form)
+  reference?: string;
 };
 
 export type TCase = {
@@ -60,6 +62,7 @@ export type TCase = {
   file_number: string;
   case_stage: TCaseStage;
   case_description: string;
+  case_date?: string; // original case date from backend
   court_id: string;
   // DETAILS
   court_details: CourtDetails;

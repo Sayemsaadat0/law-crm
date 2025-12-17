@@ -12,6 +12,12 @@ function CaseCreateContainer() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<TabValue>("basic");
 
+  // Clear any previous draft case ID when starting a new case creation flow
+  useState(() => {
+    localStorage.removeItem("current_case_id");
+    return 1;
+  });
+
   const handleStepComplete = () => {
     if (currentStep < 3) {
       const nextStep = currentStep + 1;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Trash2, Search, Loader2, User2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,72 +9,189 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { dummyMembers } from "@/dummy/dummy.data";
+import { usersApi, type UserListItem } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
+import RoleBasedRoute from "@/components/auth/RoleBasedRoute";
 
 // --------------------------
 // FORM SCHEMA
 // --------------------------
-const memberSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+const memberSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(6, "Confirm password is required"),
+    mobile: z.string().optional(),
+    role: z.enum(["admin", "owner", "lawyer"]).optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
 
 type MemberFormType = z.infer<typeof memberSchema>;
-
-// Dummy member data
 
 // --------------------------
 // COMPONENT
 // --------------------------
-export default function Members() {
-  const [members, setMembers] = useState(dummyMembers);
-  const isAdmin = true; // Admin state
+function MembersContent() {
+  const { user: currentUser } = useAuthStore();
+  const [members, setMembers] = useState<UserListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+  });
+
+  const isAdmin = currentUser?.role === "admin";
 
   const form = useForm<MemberFormType>({
     resolver: zodResolver(memberSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      mobile: "",
+      role: "lawyer", // Default role
+    },
   });
 
   // --------------------------
-  // SUBMIT HANDLER
+  // FETCH MEMBERS
   // --------------------------
-  const onSubmit = (data: MemberFormType) => {
+  const fetchMembers = useCallback(async (page = 1) => {
     try {
-      setTimeout(() => {
-        console.log("Form Submitted:", data);
+      setIsLoading(true);
+      const response = await usersApi.getAll({
+        search: searchQuery || undefined,
+        per_page: 15,
+        page,
+      });
 
-        setMembers((prev) => [
-          ...prev,
-          {
-            id: `member-${String(prev.length + 1).padStart(3, "0")}`,
-            name: data.name,
-            email: data.email,
-            phone: "+880-1700-000000", // Default phone
-            role: "Lawyers", // Default role
-            thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-          },
-        ]);
+      if (response.data) {
+        setMembers(response.data.data || []);
+        setPagination({
+          current_page: response.data.current_page || 1,
+          last_page: response.data.last_page || 1,
+          per_page: response.data.per_page || 15,
+          total: response.data.total || 0,
+        });
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch members");
+      setMembers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery]);
 
+  // --------------------------
+  // EFFECTS
+  // --------------------------
+  useEffect(() => {
+    if (isAdmin) {
+      fetchMembers(currentPage);
+    }
+  }, [currentPage, fetchMembers, isAdmin]);
+
+  // Debounce search
+  useEffect(() => {
+    if (!isAdmin) return;
+    
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, isAdmin]);
+
+  // --------------------------
+  // SUBMIT HANDLER (Create Member)
+  // --------------------------
+  const onSubmit = async (data: MemberFormType) => {
+    let toastId: string | number | undefined;
+    try {
+      setIsSubmitting(true);
+      toastId = toast.loading("Creating member...");
+
+      await usersApi.create({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        password_confirmation: data.confirmPassword,
+        mobile: data.mobile || undefined,
+        role: data.role || "lawyer",
+      });
+
+      if (toastId !== undefined) {
+        toast.success("Member created successfully!", { id: toastId });
+      } else {
         toast.success("Member created successfully!");
-        form.reset();
-      }, 800);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong!");
+      }
+      form.reset();
+      await fetchMembers(currentPage);
+    } catch (error: any) {
+      if (toastId !== undefined) {
+        toast.error(error.message || "Failed to create member", { id: toastId });
+      } else {
+        toast.error(error.message || "Failed to create member");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --------------------------
+  // DELETE HANDLER
+  // --------------------------
+  const handleDelete = async (member: UserListItem) => {
+    if (!confirm(`Are you sure you want to delete "${member.name}"?`)) {
+      return;
+    }
+
+    // Prevent deleting own account
+    if (currentUser?.id === member.id) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+
+    try {
+      const toastId = toast.loading("Deleting member...");
+      await usersApi.delete(member.id);
+      toast.success("Member deleted successfully!", { id: toastId });
+      await fetchMembers(currentPage);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete member");
     }
   };
 
   // Get role badge style
   const getRoleStyle = (role: string) => {
-    if (role === "Lawyers") {
+    const roleLower = role.toLowerCase();
+    if (roleLower === "lawyer" || roleLower === "lawyers") {
       return "bg-blue-100 text-blue-800 border-blue-200";
-    } else if (role === "Owner") {
-      return "bg-green-100 text-green-800 border-green-200";
-    } else if (role === "Admin") {
+    } else if (roleLower === "admin") {
       return "bg-purple-100 text-purple-800 border-purple-200";
+    } else if (roleLower === "owner") {
+      return "bg-green-100 text-green-800 border-green-200";
     } else {
       return "bg-gray-100 text-gray-800 border-gray-200";
     }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    const roleLower = role.toLowerCase();
+    if (roleLower === "lawyer") return "Lawyer";
+    if (roleLower === "admin") return "Admin";
+    if (roleLower === "owner") return "Owner";
+    return role;
   };
 
   return (
@@ -130,6 +247,24 @@ export default function Members() {
                 )}
               </div>
 
+              {/* Mobile */}
+              <div className="space-y-2">
+                <Label htmlFor="member-mobile" className="text-sm font-medium text-gray-700">
+                  Mobile (Optional)
+                </Label>
+                <Input
+                  id="member-mobile"
+                  placeholder="Enter mobile number"
+                  className="w-full h-10"
+                  {...form.register("mobile")}
+                />
+                {form.formState.errors.mobile && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {form.formState.errors.mobile.message}
+                  </p>
+                )}
+              </div>
+
               {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="member-password" className="text-sm font-medium text-gray-700">
@@ -149,13 +284,61 @@ export default function Members() {
                 )}
               </div>
 
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="member-confirm-password" className="text-sm font-medium text-gray-700">
+                  Confirm Password
+                </Label>
+                <Input
+                  id="member-confirm-password"
+                  type="password"
+                  placeholder="Confirm password"
+                  className="w-full h-10"
+                  {...form.register("confirmPassword")}
+                />
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Role */}
+              <div className="space-y-2">
+                <Label htmlFor="member-role" className="text-sm font-medium text-gray-700">
+                  Role
+                </Label>
+                <select
+                  id="member-role"
+                  className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-green focus:border-transparent"
+                  {...form.register("role")}
+                >
+                  <option value="lawyer">Lawyer</option>
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                </select>
+                {form.formState.errors.role && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {form.formState.errors.role.message}
+                  </p>
+                )}
+              </div>
+
               {/* Submit Button */}
               <div className="pt-2">
                 <Button 
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full bg-primary-green hover:bg-primary-green/90 text-gray-900 font-medium h-10"
                 >
-                  Create Member
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Member"
+                  )}
                 </Button>
               </div>
             </form>
@@ -164,87 +347,156 @@ export default function Members() {
 
         {/* Member Table */}
         <div className={isAdmin ? "col-span-6" : "col-span-8"}>
+          {/* Search */}
+          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search members by name, email, or mobile..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10"
+              />
+            </div>
+          </div>
+
           <div className="bg-background rounded-lg border border-border shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-primary-green border-b border-border">
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                      Name
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                      Email & Phone
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                      Role
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-black">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {members.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-3 py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No members found
-                      </td>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-primary-green" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-primary-green border-b border-border">
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                        Name
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                        Email & Phone
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                        Role
+                      </th>
+                      {isAdmin && (
+                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-black">
+                          Actions
+                        </th>
+                      )}
                     </tr>
-                  ) : (
-                    members.map((member) => (
-                      <tr
-                        key={member.id}
-                        className="hover:bg-muted/10 transition-colors"
-                      >
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={member.thumbnail}
-                              alt={member.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <p className="text-xs font-medium">{member.name}</p>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <p className="text-xs font-medium">{member.email}</p>
-                          <p className="text-xs text-muted-foreground">{member.phone}</p>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getRoleStyle(
-                              member.role
-                            )}`}
-                          >
-                            {member.role}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center justify-end">
-                            <button
-                              onClick={() => {
-                                setMembers((prev) => prev.filter((m) => m.id !== member.id));
-                                toast.success("Member deleted successfully!");
-                              }}
-                              className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                              title="Delete member"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {members.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={isAdmin ? 4 : 3}
+                          className="px-3 py-8 text-center text-sm text-muted-foreground"
+                        >
+                          No members found
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      members.map((member) => (
+                        <tr
+                          key={member.id}
+                          className="hover:bg-muted/10 transition-colors"
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              {member.image ? (
+                                <img
+                                  src={member.image}
+                                  alt={member.name}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <User2 className="w-4 h-4 text-gray-400" />
+                                </div>
+                              )}
+                              <p className="text-xs font-medium">{member.name}</p>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <p className="text-xs font-medium">{member.email}</p>
+                            {member.mobile && (
+                              <p className="text-xs text-muted-foreground">{member.mobile}</p>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getRoleStyle(
+                                member.role
+                              )}`}
+                            >
+                              {getRoleDisplayName(member.role)}
+                            </span>
+                          </td>
+                          {isAdmin && (
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end">
+                                <button
+                                  onClick={() => handleDelete(member)}
+                                  disabled={currentUser?.id === member.id}
+                                  className="p-1.5 rounded-md hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={currentUser?.id === member.id ? "Cannot delete your own account" : "Delete member"}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination.last_page > 1 && (
+              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Showing {(pagination.current_page - 1) * pagination.per_page + 1} to{" "}
+                  {Math.min(pagination.current_page * pagination.per_page, pagination.total)} of{" "}
+                  {pagination.total} results
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outlineBtn"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={pagination.current_page === 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outlineBtn"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(pagination.last_page, p + 1))}
+                    disabled={pagination.current_page === pagination.last_page || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// --------------------------
+// EXPORT WITH ROLE PROTECTION
+// --------------------------
+export default function Members() {
+  return (
+    <RoleBasedRoute allowedRoles={['admin']}>
+      <MembersContent />
+    </RoleBasedRoute>
   );
 }

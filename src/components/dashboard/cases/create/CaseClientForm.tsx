@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { caseClientsApi } from "@/lib/api";
 
 const caseClientSchema = z.object({
   client_name: z.string().min(1, "Client name is required"),
@@ -35,6 +36,7 @@ const CaseClientForm = ({
   isActive = true,
   onStepComplete 
 }: CaseClientFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<CaseClientFormType>({
     resolver: zodResolver(caseClientSchema),
     defaultValues: instance || {
@@ -57,17 +59,51 @@ const CaseClientForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance]);
 
-  const onSubmit = (data: CaseClientFormType) => {
+  const onSubmit = async (data: CaseClientFormType) => {
+    let toastId: string | number | undefined;
     try {
-      console.log("Case Client Info:", data);
-      toast.success("Client information saved!");
+      if (!isActive) return;
+
+      const caseId = localStorage.getItem("current_case_id");
+      if (!caseId) {
+        toast.error("Case basic information not found. Please complete step 1 again.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      toastId = toast.loading("Saving client information...");
+
+      await caseClientsApi.create({
+        client_name: data.client_name,
+        client_email: data.client_email,
+        client_phone: data.client_phone,
+        client_address: data.client_address,
+        billing_account_name: data.billing_account_name,
+        billing_account_number: data.billing_account_number,
+        billing_bank_name: data.billing_bank_name,
+        billing_branch_name: data.billing_branch,
+        client_description: data.client_description,
+        case_id: Number(caseId),
+      });
+
+      if (toastId !== undefined) {
+        toast.success("Client information saved!", { id: toastId });
+      } else {
+        toast.success("Client information saved!");
+      }
       
       // Move to next step
       if (onStepComplete) {
         onStepComplete();
       }
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong!");
+      if (toastId !== undefined) {
+        toast.error(err.message || "Failed to save client information", { id: toastId });
+      } else {
+        toast.error(err.message || "Failed to save client information");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -249,10 +285,10 @@ const CaseClientForm = ({
       <div className="pt-2">
         <Button 
           type="submit"
-          disabled={!isActive}
+          disabled={!isActive || isSubmitting}
           className="w-full bg-primary-green hover:bg-primary-green/90 text-gray-900 font-medium h-10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Save & Continue
+          {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </div>
     </form>

@@ -1,14 +1,146 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Phone, Mail, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { dummyCase } from "@/dummy/dummy.data";
 import PaymentPanel from "@/components/pageComponent/cases/PaymentPanel";
 import CaseTimeline from "@/components/pageComponent/cases/CaseTimeline";
 import PaymentForm from "@/components/pageComponent/cases/PaymentForm";
 import HearingForm from "@/components/pageComponent/cases/HearingForm";
+import type { TCase } from "@/types/case.type";
+import { casesApi, type CaseListItem } from "@/lib/api";
+
+// Local helper to map API case shape to TCase (same as in Cases.tsx)
+const mapApiCaseToTCase = (apiCase: CaseListItem): TCase => {
+  const raw: any = apiCase as any;
+
+  const firstClient = (raw.caseClients ?? raw.case_clients)?.[0];
+  const firstParty = (raw.caseParties ?? raw.case_parties)?.[0];
+  const hearingsArr = raw.caseHearings ?? raw.case_hearings;
+  const paymentsArr = raw.casePayments ?? raw.case_payments;
+
+  const hearings =
+    Array.isArray(hearingsArr)
+      ? hearingsArr.map((h: any) => ({
+          title: h.title,
+          serial_no: h.serial_number,
+          hearing_date: h.date,
+          details: h.note || "",
+          file: h.file,
+        }))
+      : [];
+
+  const payments =
+    Array.isArray(paymentsArr)
+      ? paymentsArr.map((p: any) => ({
+          paid_amount: p.amount,
+          paid_date: p.date,
+        }))
+      : [];
+
+  const stageMap: Record<string, "Active" | "Disposed" | "Left"> = {
+    active: "Active",
+    disposed: "Disposed",
+    left: "Left",
+    archive: "Disposed",
+  };
+
+  return {
+    id: String(apiCase.id),
+    case_number: apiCase.number_of_case,
+    file_number: apiCase.file_number || "",
+    case_stage: stageMap[apiCase.stages?.toLowerCase() || "active"] || "Active",
+    case_description: apiCase.description || "",
+    case_date: apiCase.date || "",
+    court_id: String(apiCase.court_id),
+    court_details: apiCase.court
+      ? {
+          id: String(apiCase.court.id),
+          name: apiCase.court.name,
+          address: apiCase.court.address,
+        }
+      : {
+          id: "",
+          name: "",
+          address: "",
+        },
+    lawyer_id: String(apiCase.lawyer_id),
+    lawyer_details: apiCase.lawyer
+      ? {
+          id: String(apiCase.lawyer.id),
+          name: apiCase.lawyer.name,
+          email: apiCase.lawyer.email || "",
+          phone: apiCase.lawyer.mobile || "",
+          address: "",
+          details: "",
+          thumbnail: apiCase.lawyer.image || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+        },
+    client_id: firstClient ? String(firstClient.id) : "",
+    client_details: firstClient
+      ? {
+          id: String(firstClient.id),
+          name: firstClient.client_name,
+          email: firstClient.client_email || "",
+          phone: firstClient.client_phone || "",
+          address: firstClient.client_address || "",
+          details: "",
+          thumbnail: "",
+          account_number: firstClient.billing_account_number || "",
+          account_name: firstClient.billing_account_name || "",
+          account_id: firstClient.billing_bank_name || "",
+          description: firstClient.client_description || "",
+          branch: firstClient.billing_branch_name || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+          account_number: "",
+          account_name: "",
+          account_id: "",
+          description: "",
+          branch: "",
+        },
+    party_id: firstParty ? String(firstParty.id) : "",
+    party_details: firstParty
+      ? {
+          id: String(firstParty.id),
+          name: firstParty.party_name,
+          email: firstParty.party_email || "",
+          phone: firstParty.party_phone || "",
+          address: firstParty.party_address || "",
+          details: firstParty.party_description || "",
+          thumbnail: "",
+          reference: firstParty.reference || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+          reference: "",
+        },
+    hearings,
+    payments,
+  };
+};
 
 export default function CaseDetails() {
   const { id } = useParams<{ id: string }>();
@@ -22,11 +154,65 @@ export default function CaseDetails() {
     | { title: string; serial_no: string; date: string; note: string; file?: string }
     | undefined
   >(undefined);
+  const [caseData, setCaseData] = useState<TCase | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Find the case by ID
-  const caseData = dummyCase.find((caseItem) => caseItem.id === id);
+  const fetchCase = useCallback(async () => {
+    if (!id) return;
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await casesApi.getById(Number(id));
+      const apiData: any =
+        response.data && (response.data as any).data
+          ? (response.data as any).data
+          : response.data;
 
-  if (!caseData) {
+      if (!apiData) {
+        setCaseData(null);
+        setError("Case not found");
+        return;
+      }
+
+      const mapped = mapApiCaseToTCase(apiData as CaseListItem);
+      setCaseData(mapped);
+    } catch (err: any) {
+      setError(err.message || "Failed to load case");
+      setCaseData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchCase();
+  }, [fetchCase]);
+
+  const handleBack = () => {
+    navigate("/dashboard/cases");
+  };
+
+  const handleHearingCreated = () => {
+    fetchCase();
+  };
+
+  const handlePaymentCreated = () => {
+    fetchCase();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 border-4 border-primary-green/30 border-t-primary-green rounded-full animate-spin" />
+          <p className="text-sm text-gray-600">Loading case details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!caseData || error) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -34,7 +220,7 @@ export default function CaseDetails() {
             Case Not Found
           </h1>
           <p className="text-lg text-gray-600 mb-4">
-            Case ID: <span className="font-semibold text-gray-900">{id}</span>
+            {error || "Unable to load case details."}
           </p>
           <Button
             onClick={() => navigate("/dashboard/cases")}
@@ -46,10 +232,6 @@ export default function CaseDetails() {
       </div>
     );
   }
-
-  const handleBack = () => {
-    navigate("/dashboard/cases");
-  };
 
   // Get stage badge style
   const getStageStyle = (stage: string) => {
@@ -75,8 +257,6 @@ export default function CaseDetails() {
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-
       {/* Breadcrumb */}
       <div className="text-sm flex items-center gap-2 text-gray-600">
         <div>
@@ -195,7 +375,9 @@ export default function CaseDetails() {
                   Case Date
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  {formatDate(new Date().toISOString())}
+                  {caseData.case_date
+                    ? formatDate(caseData.case_date)
+                    : "N/A"}
                 </p>
               </div>
               <div>
@@ -289,6 +471,7 @@ export default function CaseDetails() {
         caseId={caseData.id}
         caseNumber={caseData.case_number}
         fileNumber={caseData.file_number}
+        onCreated={handlePaymentCreated}
       />
 
       {/* Hearing Form Dialog */}
@@ -299,6 +482,7 @@ export default function CaseDetails() {
         caseId={caseData.id}
         caseNumber={caseData.case_number}
         fileNumber={caseData.file_number}
+        onCreated={handleHearingCreated}
       />
     </div>
   );

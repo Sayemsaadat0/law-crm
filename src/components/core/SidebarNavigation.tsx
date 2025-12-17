@@ -15,6 +15,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
 
 const menuItems = [
   {
@@ -47,18 +49,17 @@ const menuItems = [
 export function SidebarNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
-  // Dummy user data - replace with actual user data from context/state
-  const userData = {
-    name: "Sarah Johnson",
-    email: "sarah.johnson@lawfirm.com",
-    role: "Admin",
-    thumbnail: "https://i.pinimg.com/736x/ff/74/2d/ff742d89abb3d60cdbdcd29eb49f87fd.jpg",
-  };
-
-  const handleLogout = () => {
-    // Add logout logic here (clear tokens, etc.)
-    navigate("/login");
+  const handleLogout = async () => {
+    const toastId = toast.loading("Logging out...");
+    try {
+      await logout();
+      toast.success("Logged out successfully", { id: toastId });
+      navigate("/login", { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to logout", { id: toastId });
+    }
   };
 
   return (
@@ -116,22 +117,30 @@ export function SidebarNavigation() {
       <div className="p-3 border-t border-gray-700/50">
         <div className="w-full min-h-[40px] bg-gray-800/50 rounded-lg p-3 flex items-center gap-3">
           {/* User Thumbnail */}
-          <img
-            src={userData.thumbnail}
-            alt={userData.name}
-            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-          />
+          {user?.image ? (
+            <img
+              src={user.image}
+              alt={user.name}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary-green flex items-center justify-center flex-shrink-0">
+              <span className="text-black font-semibold text-sm">
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </span>
+            </div>
+          )}
           
           {/* User Info */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">
-              {userData.name}
+              {user?.name || "User"}
             </p>
             <p className="text-xs text-gray-400 truncate">
-              {userData.email}
+              {user?.email || ""}
             </p>
-            <p className="text-xs text-primary-green font-medium mt-0.5">
-              {userData.role}
+            <p className="text-xs text-primary-green font-medium mt-0.5 capitalize">
+              {user?.role || ""}
             </p>
           </div>
           

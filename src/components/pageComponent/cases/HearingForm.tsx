@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { caseHearingsApi } from "@/lib/api";
 
 const hearingSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -42,6 +43,7 @@ interface HearingFormProps {
   caseId?: string;
   caseNumber?: string;
   fileNumber?: string;
+  onCreated?: () => void;
 }
 
 const HearingForm = ({
@@ -51,50 +53,92 @@ const HearingForm = ({
   caseId,
   caseNumber,
   fileNumber,
+  onCreated,
 }: HearingFormProps) => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<HearingFormData>({
     resolver: zodResolver(hearingSchema),
-    defaultValues: instance
-      ? {
-          title: instance.title,
-          serial_no: instance.serial_no,
-          date: instance.date,
-          note: instance.note,
-        }
-      : {
-          title: "",
-          serial_no: "",
-          date: "",
-          note: "",
-        },
+    defaultValues: {
+      title: "",
+      serial_no: "",
+      date: "",
+      note: "",
+      file: undefined,
+    },
   });
 
-  const onSubmit = (data: HearingFormData) => {
+  // When editing, populate form with existing hearing data
+  useEffect(() => {
+    if (instance) {
+      form.reset({
+        title: instance.title,
+        serial_no: instance.serial_no,
+        date: instance.date,
+        note: instance.note,
+        file: undefined,
+      });
+      setFilePreview(null);
+    } else {
+      form.reset({
+        title: "",
+        serial_no: "",
+        date: "",
+        note: "",
+        file: undefined,
+      });
+      setFilePreview(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance, open]);
+
+  const onSubmit = async (data: HearingFormData) => {
+    let toastId: string | number | undefined;
     try {
+      if (!caseId) {
+        toast.error("Case information not found.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      toastId = toast.loading("Saving hearing...");
+
       const formData = new FormData();
       formData.append("title", data.title);
-      formData.append("serial_no", data.serial_no);
+      // Backend expects serial_number (snake_case)
+      formData.append("serial_number", data.serial_no);
       formData.append("date", data.date);
       formData.append("note", data.note);
+      formData.append("case_id", caseId);
       if (data.file) {
         formData.append("file", data.file);
       }
-      if (caseId) {
-        formData.append("case_id", caseId);
+
+      await caseHearingsApi.create(formData);
+
+      if (toastId !== undefined) {
+        toast.success("Hearing created successfully!", { id: toastId });
+      } else {
+        toast.success("Hearing created successfully!");
       }
 
-      console.log("Hearing Form Data:", formData);
-      console.log("Is Update:", !!instance);
-
-      toast.success(instance ? "Hearing updated successfully!" : "Hearing created successfully!");
       form.reset();
       setFilePreview(null);
       onOpenChange(false);
+
+      if (onCreated) {
+        onCreated();
+      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong!";
-      toast.error(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : "Failed to save hearing";
+      if (toastId !== undefined) {
+        toast.error(errorMessage, { id: toastId });
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -231,9 +275,10 @@ const HearingForm = ({
             </Button>
             <Button
               type="submit"
-              className="bg-primary-green hover:bg-primary-green/90 text-gray-900"
+              disabled={isSubmitting}
+              className="bg-primary-green hover:bg-primary-green/90 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {instance ? "Update" : "Create"}
+              {isSubmitting ? "Saving..." : instance ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </form>

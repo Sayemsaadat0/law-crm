@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,7 +16,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { dummyCourts, dummyLawyers } from "@/dummy/dummy.data";
+import { usersApi, casesApi, courtsApi, type UserListItem, type Court } from "@/lib/api";
 
 const caseBasicInfoSchema = z.object({
   date: z.string().min(1, "Date is required"),
@@ -43,6 +43,11 @@ const CaseBasicInfoForm = ({
   isActive = true,
   onStepComplete 
 }: CaseBasicInfoFormProps) => {
+  const [lawyers, setLawyers] = useState<UserListItem[]>([]);
+  const [isLoadingLawyers, setIsLoadingLawyers] = useState(false);
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [isLoadingCourts, setIsLoadingCourts] = useState(false);
+
   const form = useForm<CaseBasicInfoFormType>({
     resolver: zodResolver(caseBasicInfoSchema),
     defaultValues: instance || {
@@ -63,17 +68,94 @@ const CaseBasicInfoForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance]);
 
-  const onSubmit = (data: CaseBasicInfoFormType) => {
+  // Fetch lawyers (users with role = lawyer)
+  useEffect(() => {
+    const fetchLawyers = async () => {
+      try {
+        setIsLoadingLawyers(true);
+        const response = await usersApi.getAll({ role: "lawyer", per_page: 100 });
+        if (response.data) {
+          setLawyers(response.data.data || []);
+        }
+      } catch (error: any) {
+        toast.error(error.message || "Failed to load lawyers");
+      } finally {
+        setIsLoadingLawyers(false);
+      }
+    };
+
+    fetchLawyers();
+  }, []);
+
+  // Fetch courts from API
+  useEffect(() => {
+    const fetchCourts = async () => {
+      try {
+        setIsLoadingCourts(true);
+        const response = await courtsApi.getAll({ status: true, per_page: 100 });
+        if (response.data) {
+          setCourts(response.data.data || []);
+        }
+      } catch (error: any) {
+        toast.error(error.message || "Failed to load courts");
+      } finally {
+        setIsLoadingCourts(false);
+      }
+    };
+
+    fetchCourts();
+  }, []);
+
+  const onSubmit = async (data: CaseBasicInfoFormType) => {
+    let toastId: string | number | undefined;
     try {
-      console.log("Case Basic Info:", data);
-      toast.success("Case basic information saved!");
+      // Basic info should only submit when step is active
+      if (!isActive) return;
+
+      // Prepare payload for API (convert to backend field names/types)
+      const payload = {
+        date: data.date,
+        lawyer_id: Number(data.lawyer_id),
+        number_of_file: Number(data.number_of_file),
+        number_of_case: Number(data.number_of_case),
+        court_id: Number(data.court_id),
+        stages: data.stages.toLowerCase(), // Active -> active
+        description: data.breakdowns,
+      };
+
+      toastId = toast.loading("Creating case...");
+
+      const response = await casesApi.create(payload);
+
+      const createdCase: any = response.data && (response.data as any).data
+        ? (response.data as any).data
+        : response.data;
+
+      const caseId = createdCase?.id;
+
+      if (!caseId) {
+        throw new Error("Case ID missing from server response");
+      }
+
+      // Store case ID for next steps (client & party)
+      localStorage.setItem("current_case_id", String(caseId));
+
+      if (toastId !== undefined) {
+        toast.success("Case basic information saved!", { id: toastId });
+      } else {
+        toast.success("Case basic information saved!");
+      }
       
       // Move to next step
       if (onStepComplete) {
         onStepComplete();
       }
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong!");
+      if (toastId !== undefined) {
+        toast.error(err.message || "Failed to save case basic info", { id: toastId });
+      } else {
+        toast.error(err.message || "Failed to save case basic info");
+      }
     }
   };
 
@@ -114,11 +196,21 @@ const CaseBasicInfoForm = ({
               <SelectValue placeholder="Select lawyer" />
             </SelectTrigger>
             <SelectContent>
-              {dummyLawyers.map((lawyer) => (
-                <SelectItem key={lawyer.id} value={lawyer.id}>
-                  {lawyer.name}
+              {isLoadingLawyers ? (
+                <SelectItem value="_loading" disabled>
+                  Loading lawyers...
                 </SelectItem>
-              ))}
+              ) : lawyers.length === 0 ? (
+                <SelectItem value="_no_lawyers" disabled>
+                  No lawyers found
+                </SelectItem>
+              ) : (
+                lawyers.map((lawyer) => (
+                  <SelectItem key={lawyer.id} value={String(lawyer.id)}>
+                    {lawyer.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
           {form.formState.errors.lawyer_id && (
@@ -184,11 +276,21 @@ const CaseBasicInfoForm = ({
               <SelectValue placeholder="Select court" />
             </SelectTrigger>
             <SelectContent>
-              {dummyCourts.map((court) => (
-                <SelectItem key={court.id} value={court.id}>
-                  {court.name}
+              {isLoadingCourts ? (
+                <SelectItem value="_loading_courts" disabled>
+                  Loading courts...
                 </SelectItem>
-              ))}
+              ) : courts.length === 0 ? (
+                <SelectItem value="_no_courts" disabled>
+                  No courts found
+                </SelectItem>
+              ) : (
+                courts.map((court) => (
+                  <SelectItem key={court.id} value={String(court.id)}>
+                    {court.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
           {form.formState.errors.court_id && (

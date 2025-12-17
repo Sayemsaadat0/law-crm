@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import loginImage from "@/assets/login.png";
+import { useAuthStore } from "@/store/authStore";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -18,6 +20,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isAuthenticated } = useAuthStore();
 
   const {
     register,
@@ -27,10 +32,26 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname || "/dashboard/home";
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location]);
+
   const onSubmit = async (value: LoginFormData) => {
     const toastId = toast.loading("Signing in...");
-    console.log(value);
-    toast.success("Login successful", { id: toastId });
+    try {
+      await login(value.email, value.password);
+      toast.success("Login successful", { id: toastId });
+      
+      // Redirect to intended page or dashboard
+      const from = (location.state as any)?.from?.pathname || "/dashboard/home";
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || "Login failed. Please check your credentials.", { id: toastId });
+    }
   };
 
   return (

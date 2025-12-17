@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Search, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CaseStageBadge } from "@/components/dashboard/cases/CaseStageBadge";
@@ -14,10 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { dummyCase } from "@/dummy/dummy.data";
 import HearingForm from "@/components/pageComponent/cases/HearingForm";
 import PaymentForm from "@/components/pageComponent/cases/PaymentForm";
 import type { TCase } from "@/types/case.type";
+import { casesApi, type CaseListItem } from "@/lib/api";
+import { toast } from "sonner";
 
 // Tab array with title and value
 const caseTabs = [
@@ -27,24 +28,211 @@ const caseTabs = [
   { title: "Archive", value: "archive" },
 ];
 
+// Helper function to map API case to TCase
+const mapApiCaseToTCase = (apiCase: CaseListItem): TCase => {
+  const raw: any = apiCase as any;
+
+  // Support both camelCase and snake_case relation keys from Laravel
+  const clients = raw.caseClients ?? raw.case_clients;
+  const parties = raw.caseParties ?? raw.case_parties;
+  const hearingsRaw = raw.caseHearings ?? raw.case_hearings;
+  const paymentsRaw = raw.casePayments ?? raw.case_payments;
+
+  // Get first client, party, hearing, payment
+  const firstClient = Array.isArray(clients) ? clients[0] : undefined;
+  const firstParty = Array.isArray(parties) ? parties[0] : undefined;
+  const hearings = Array.isArray(hearingsRaw)
+    ? hearingsRaw.map((h: any) => ({
+    title: h.title,
+    serial_no: h.serial_number,
+    hearing_date: h.date,
+    details: h.note || "",
+    file: h.file,
+    }))
+    : [];
+  const payments = Array.isArray(paymentsRaw)
+    ? paymentsRaw.map((p: any) => ({
+    paid_amount: p.amount,
+    paid_date: p.date,
+    }))
+    : [];
+
+  // Map stages: 'active' -> 'Active', 'disposed' -> 'Disposed', 'left' -> 'Left'
+  const stageMap: Record<string, "Active" | "Disposed" | "Left"> = {
+    active: "Active",
+    disposed: "Disposed",
+    left: "Left",
+    archive: "Disposed", // Archive maps to Disposed
+  };
+
+  return {
+    id: String(apiCase.id),
+    case_number: apiCase.number_of_case,
+    file_number: apiCase.file_number || "",
+    case_stage: stageMap[apiCase.stages?.toLowerCase() || "active"] || "Active",
+    case_description: apiCase.description || "",
+    case_date: apiCase.date || "",
+    court_id: String(apiCase.court_id),
+    court_details: apiCase.court ? {
+      id: String(apiCase.court.id),
+      name: apiCase.court.name,
+      address: apiCase.court.address,
+    } : {
+      id: "",
+      name: "",
+      address: "",
+    },
+    lawyer_id: String(apiCase.lawyer_id),
+    lawyer_details: apiCase.lawyer ? {
+      id: String(apiCase.lawyer.id),
+      name: apiCase.lawyer.name,
+      email: apiCase.lawyer.email || "",
+      phone: apiCase.lawyer.mobile || "",
+      address: "",
+      details: "",
+      thumbnail: apiCase.lawyer.image || "",
+    } : {
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      details: "",
+      thumbnail: "",
+    },
+    client_id: firstClient ? String(firstClient.id) : "",
+    client_details: firstClient ? {
+      id: String(firstClient.id),
+      name: firstClient.client_name,
+      email: firstClient.client_email || "",
+      phone: firstClient.client_phone || "",
+      address: firstClient.client_address || "",
+      details: "",
+      thumbnail: "",
+      // Map billing fields from backend
+      account_number: firstClient.billing_account_number || "",
+      account_name: firstClient.billing_account_name || "",
+      account_id: firstClient.billing_bank_name || "",
+      description: firstClient.client_description || "",
+      branch: firstClient.billing_branch_name || "",
+    } : {
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      details: "",
+      thumbnail: "",
+      account_number: "",
+      account_name: "",
+      account_id: "",
+      description: "",
+      branch: "",
+    },
+    party_id: firstParty ? String(firstParty.id) : "",
+    party_details: firstParty ? {
+      id: String(firstParty.id),
+      name: firstParty.party_name,
+      email: firstParty.party_email || "",
+      phone: firstParty.party_phone || "",
+      address: firstParty.party_address || "",
+      // Map party description and reference
+      details: firstParty.party_description || "",
+      thumbnail: "",
+      reference: firstParty.reference || "",
+    } : {
+      id: "",
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      details: "",
+      thumbnail: "",
+      reference: "",
+    },
+    hearings,
+    payments,
+  };
+};
+
 export default function CasesPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("");
+  const [stageFilter, setStageFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cases, setCases] = useState<TCase[]>([]);
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+  });
   const [hearingDialogOpen, setHearingDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<TCase | null>(null);
 
+  // Fetch cases
+  const fetchCases = useCallback(async (page = 1) => {
+    try {
+      setIsLoading(true);
+      const stages = activeTab || (stageFilter !== "all" ? stageFilter : undefined);
+      
+      const response = await casesApi.getAll({
+        search: searchQuery || undefined,
+        stages,
+        with_clients: true,
+        with_parties: true,
+        with_hearings: true,
+        with_payments: true,
+        per_page: 15,
+        page,
+      });
 
-  /* 
-1. stage , 
+      if (response.data) {
+        // Only keep cases that have both client and party information
+        const completeCases = response.data.data.filter((item: CaseListItem | any) => {
+          const raw: any = item as any;
+          const clients = raw.caseClients ?? raw.case_clients;
+          const parties = raw.caseParties ?? raw.case_parties;
 
-  const data = useGetCasesData(
-    stage: activeTab,
-    search: search,
-    page: page,
-    limit: limit,
-  )
-  */
+          const hasClient = Array.isArray(clients) && clients.length > 0;
+          const hasParty = Array.isArray(parties) && parties.length > 0;
+          return hasClient && hasParty;
+        });
+
+        const mappedCases = completeCases.map(mapApiCaseToTCase);
+        setCases(mappedCases);
+        setPagination({
+          current_page: response.data.current_page || 1,
+          last_page: response.data.last_page || 1,
+          per_page: response.data.per_page || 15,
+          total: response.data.total || 0,
+        });
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch cases");
+      setCases([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab, stageFilter, searchQuery]);
+
+  // Effects
+  useEffect(() => {
+    fetchCases(currentPage);
+  }, [currentPage, fetchCases]);
+
+  // Debounce search and reset filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeTab, stageFilter]);
+
   const handleNewHearing = (caseData: TCase) => {
     setSelectedCase(caseData);
     setHearingDialogOpen(true);
@@ -57,6 +245,52 @@ export default function CasesPage() {
 
   const handleViewCase = (caseData: TCase) => {
     navigate(`/dashboard/cases/${caseData.id}`);
+  };
+
+  const handleEditCase = (caseData: TCase) => {
+    navigate(`/dashboard/cases/edit/${caseData.id}`);
+  };
+
+  const handleHearingCreated = () => {
+    // Refresh cases so that new hearing is reflected in previous/next date & payment status
+    fetchCases(currentPage);
+  };
+
+  const handlePaymentCreated = () => {
+    // Refresh cases so that payment status is updated
+    fetchCases(currentPage);
+  };
+
+  // Get previous and next hearing dates
+  const getPreviousDate = (caseItem: TCase): string => {
+    if (!caseItem.hearings || caseItem.hearings.length === 0) return "N/A";
+    const sortedHearings = [...caseItem.hearings].sort((a, b) => 
+      new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime()
+    );
+    const pastHearings = sortedHearings.filter(h => 
+      new Date(h.hearing_date) < new Date()
+    );
+    if (pastHearings.length === 0) return "N/A";
+    return new Date(pastHearings[pastHearings.length - 1].hearing_date).toLocaleDateString();
+  };
+
+  const getNextDate = (caseItem: TCase): string => {
+    if (!caseItem.hearings || caseItem.hearings.length === 0) return "N/A";
+    const sortedHearings = [...caseItem.hearings].sort((a, b) => 
+      new Date(a.hearing_date).getTime() - new Date(b.hearing_date).getTime()
+    );
+    const futureHearings = sortedHearings.filter(h => 
+      new Date(h.hearing_date) >= new Date()
+    );
+    if (futureHearings.length === 0) return "N/A";
+    return new Date(futureHearings[0].hearing_date).toLocaleDateString();
+  };
+
+  // Calculate payment status
+  const getPaymentStatus = (caseItem: TCase): string => {
+    if (!caseItem.payments || caseItem.payments.length === 0) return "No Payment";
+    const totalPaid = caseItem.payments.reduce((sum, p) => sum + p.paid_amount, 0);
+    return totalPaid > 0 ? `Paid: ${totalPaid}` : "No Payment";
   };
 
   return (
@@ -91,7 +325,7 @@ export default function CasesPage() {
 
         {/* Right Side - Select and Search */}
         <div className="flex items-center gap-3">
-          <Select defaultValue="all">
+          <Select value={stageFilter} onValueChange={setStageFilter}>
             <SelectTrigger className="w-[180px] h-9 py-2">
               <SelectValue placeholder="Case Stage" />
             </SelectTrigger>
@@ -108,6 +342,8 @@ export default function CasesPage() {
             <input
               type="text"
               placeholder="Search cases..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-4 py-2 w-64 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary h-9"
             />
           </div>
@@ -115,134 +351,202 @@ export default function CasesPage() {
       </div>
 
       <div className="bg-background rounded-lg border border-border shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-primary-green border-b border-border">
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  SL
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Case Id
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Number of Case
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Previous Date
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Next Date
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Case Stage
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Payment Status
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Client
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Party
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                  Lawyer
-                </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-black">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {dummyCase.map((caseItem, index) => {
-                return (
-                  <tr
-                    key={caseItem.id}
-                    className="hover:bg-muted/10 transition-colors"
-                  >
-                    <td className="px-3 py-2.5">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {index + 1}
-                      </span>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <Link
-                        to={`/dashboard/cases/${caseItem.id}`}
-                        className="flex items-center gap-1.5 hover:text-primary-green transition-colors cursor-pointer"
-                      >
-                        <div>
-                          <p className="text-xs font-medium">
-                            {caseItem.case_number}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {caseItem.file_number}
-                          </p>
-                        </div>
-                      </Link>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs font-medium">{caseItem.case_number}</p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs text-muted-foreground">N/A</p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs text-muted-foreground">N/A</p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <CaseStageBadge stage={caseItem.case_stage} />
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                        N/A
-                      </span>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs font-medium">
-                        {caseItem.client_details.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {caseItem.client_details.account_id}
-                      </p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs font-medium">
-                        {caseItem.party_details.name}
-                      </p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <p className="text-xs font-medium">
-                        {caseItem.lawyer_details.name}
-                      </p>
-                    </td>
-
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-center">
-                        <CaseActionDropdown
-                          caseData={caseItem}
-                          onView={handleViewCase}
-                          onEdit={() => {}}
-                          onReceivePayment={handleReceivePayment}
-                          onNewHearing={handleNewHearing}
-                        />
-                      </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-green" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-primary-green border-b border-border">
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    SL
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Case Id
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Number of Case
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Previous Date
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Next Date
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Case Stage
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Payment Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Client
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Party
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-black">
+                    Lawyer
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-black">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {cases.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={11}
+                      className="px-3 py-8 text-center text-sm text-muted-foreground"
+                    >
+                      No cases found
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  cases.map((caseItem, index) => {
+                    const previousDate = getPreviousDate(caseItem);
+                    const nextDate = getNextDate(caseItem);
+                    const paymentStatus = getPaymentStatus(caseItem);
+
+                    return (
+                      <tr
+                        key={caseItem.id}
+                        className="hover:bg-muted/10 transition-colors"
+                      >
+                        <td className="px-3 py-2.5">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {(pagination.current_page - 1) * pagination.per_page + index + 1}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <Link
+                            to={`/dashboard/cases/${caseItem.id}`}
+                            className="flex items-center gap-1.5 hover:text-primary-green transition-colors cursor-pointer"
+                          >
+                            <div>
+                              <p className="text-xs font-medium">
+                                {caseItem.case_number}
+                              </p>
+                              {caseItem.file_number && (
+                                <p className="text-xs text-muted-foreground">
+                                  {caseItem.file_number}
+                                </p>
+                              )}
+                            </div>
+                          </Link>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <p className="text-xs font-medium">{caseItem.case_number}</p>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <p className="text-xs text-muted-foreground">{previousDate}</p>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <p className="text-xs text-muted-foreground">{nextDate}</p>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <CaseStageBadge stage={caseItem.case_stage} />
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                            {paymentStatus}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          {caseItem.client_details.name ? (
+                            <>
+                              <p className="text-xs font-medium">
+                                {caseItem.client_details.name}
+                              </p>
+                              {caseItem.client_details.account_id && (
+                                <p className="text-xs text-muted-foreground">
+                                  {caseItem.client_details.account_id}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">N/A</p>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          {caseItem.party_details.name ? (
+                            <p className="text-xs font-medium">
+                              {caseItem.party_details.name}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">N/A</p>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          {caseItem.lawyer_details.name ? (
+                            <p className="text-xs font-medium">
+                              {caseItem.lawyer_details.name}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">N/A</p>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center justify-center">
+                            <CaseActionDropdown
+                              caseData={caseItem}
+                              onView={handleViewCase}
+                              onEdit={handleEditCase}
+                              onReceivePayment={handleReceivePayment}
+                              onNewHearing={handleNewHearing}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.last_page > 1 && (
+          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {(pagination.current_page - 1) * pagination.per_page + 1} to{" "}
+              {Math.min(pagination.current_page * pagination.per_page, pagination.total)} of{" "}
+              {pagination.total} results
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outlineBtn"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={pagination.current_page === 1 || isLoading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outlineBtn"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(pagination.last_page, p + 1))}
+                disabled={pagination.current_page === pagination.last_page || isLoading}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hearing Form Dialog */}
@@ -253,6 +557,7 @@ export default function CasesPage() {
           caseId={selectedCase.id}
           caseNumber={selectedCase.case_number}
           fileNumber={selectedCase.file_number}
+          onCreated={handleHearingCreated}
         />
       )}
 
@@ -265,6 +570,7 @@ export default function CasesPage() {
           caseId={selectedCase.id}
           caseNumber={selectedCase.case_number}
           fileNumber={selectedCase.file_number}
+          onCreated={handlePaymentCreated}
         />
       )}
     </div>

@@ -4,17 +4,16 @@ import "./index.css";
 import { RouterProvider } from "react-router-dom";
 import router from "./routes/Router";
 import { Toaster } from "sonner";
-// import router from './Routes/Routes.jsx'
-// import AuthProvider from './Provider/AuthProvider'
+import AuthInitializer from "./components/auth/AuthInitializer";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Root element not found");
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <>
+    <AuthInitializer>
       <Toaster />
       <RouterProvider router={router} />
-    </>
+    </AuthInitializer>
   </React.StrictMode>
 );

@@ -1,8 +1,10 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import RoleBasedRoute from "@/components/auth/RoleBasedRoute";
 import Courts from "@/pages/Courts";
-import ComingSoon from "@/pages/ComingSoon";
+import CaseEdit from "@/pages/CaseEdit";
 import CaseCreateContainer from "@/components/dashboard/cases/create/CaseCreateContainer";
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const Home = lazy(() => import("../pages/Home"));
@@ -22,7 +24,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <DashboardLayout />,
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       // redirect /dashboard → /dashboard/home
       {
@@ -59,14 +65,22 @@ const router = createBrowserRouter([
       },
       {
         path: "cases/edit/:id",
-        element: <ComingSoon />,
+        element: (
+          <RoleBasedRoute allowedRoles={['admin', 'owner']}>
+            <Suspense fallback={<p>Loading...</p>}>
+              <CaseEdit />
+            </Suspense>
+          </RoleBasedRoute>
+        ),
       },
       {
         path: "members",
         element: (
-          <Suspense fallback={<p>Loading...</p>}>
-            <Members />
-          </Suspense>
+          <RoleBasedRoute allowedRoles={['admin']}>
+            <Suspense fallback={<p>Loading...</p>}>
+              <Members />
+            </Suspense>
+          </RoleBasedRoute>
         ),
       },
       {

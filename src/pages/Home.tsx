@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { FileText, Calendar, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { dummyCase } from "@/dummy/dummy.data";
+import { toast } from "sonner";
+import { casesApi, type CaseListItem } from "@/lib/api";
+import type { TCase } from "@/types/case.type";
 import {
   PieChart,
   Pie,
@@ -19,7 +22,198 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// Helper function to map API case item to TCase for dashboard
+const mapApiCaseToTCase = (apiCase: CaseListItem): TCase => {
+  const raw: any = apiCase as any;
+
+  // Support both camelCase and snake_case relation keys from Laravel
+  const clients = raw.caseClients ?? raw.case_clients;
+  const parties = raw.caseParties ?? raw.case_parties;
+  const hearingsRaw = raw.caseHearings ?? raw.case_hearings;
+  const paymentsRaw = raw.casePayments ?? raw.case_payments;
+
+  const firstClient = Array.isArray(clients) ? clients[0] : undefined;
+  const firstParty = Array.isArray(parties) ? parties[0] : undefined;
+
+  const hearings = Array.isArray(hearingsRaw)
+    ? hearingsRaw.map((h: any) => ({
+        title: h.title,
+        serial_no: h.serial_number,
+        hearing_date: h.date,
+        details: h.note || "",
+        file: h.file,
+      }))
+    : [];
+
+  const payments = Array.isArray(paymentsRaw)
+    ? paymentsRaw.map((p: any) => ({
+        paid_amount: p.amount,
+        paid_date: p.date,
+      }))
+    : [];
+
+  // Map stages: 'active' -> 'Active', 'disposed' -> 'Disposed', 'left' -> 'Left'
+  const stageMap: Record<string, "Active" | "Disposed" | "Left"> = {
+    active: "Active",
+    disposed: "Disposed",
+    left: "Left",
+    archive: "Disposed",
+  };
+
+  return {
+    id: String(apiCase.id),
+    case_number: apiCase.number_of_case,
+    file_number: apiCase.file_number || "",
+    case_stage: stageMap[apiCase.stages?.toLowerCase() || "active"] || "Active",
+    case_description: apiCase.description || "",
+    case_date: apiCase.date || "",
+    court_id: String(apiCase.court_id),
+    court_details: apiCase.court
+      ? {
+          id: String(apiCase.court.id),
+          name: apiCase.court.name,
+          address: apiCase.court.address,
+        }
+      : {
+          id: "",
+          name: "",
+          address: "",
+        },
+    lawyer_id: String(apiCase.lawyer_id),
+    lawyer_details: apiCase.lawyer
+      ? {
+          id: String(apiCase.lawyer.id),
+          name: apiCase.lawyer.name,
+          email: apiCase.lawyer.email || "",
+          phone: apiCase.lawyer.mobile || "",
+          address: "",
+          details: "",
+          thumbnail: apiCase.lawyer.image || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+        },
+    client_id: firstClient ? String(firstClient.id) : "",
+    client_details: firstClient
+      ? {
+          id: String(firstClient.id),
+          name: firstClient.client_name,
+          email: firstClient.client_email || "",
+          phone: firstClient.client_phone || "",
+          address: firstClient.client_address || "",
+          details: "",
+          thumbnail: "",
+          account_number: firstClient.billing_account_number || "",
+          account_name: firstClient.billing_account_name || "",
+          account_id: firstClient.billing_bank_name || "",
+          description: firstClient.client_description || "",
+          branch: firstClient.billing_branch_name || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+          account_number: "",
+          account_name: "",
+          account_id: "",
+          description: "",
+          branch: "",
+        },
+    party_id: firstParty ? String(firstParty.id) : "",
+    party_details: firstParty
+      ? {
+          id: String(firstParty.id),
+          name: firstParty.party_name,
+          email: firstParty.party_email || "",
+          phone: firstParty.party_phone || "",
+          address: firstParty.party_address || "",
+          details: firstParty.party_description || "",
+          thumbnail: "",
+          reference: firstParty.reference || "",
+        }
+      : {
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          details: "",
+          thumbnail: "",
+          reference: "",
+        },
+    hearings,
+    payments,
+  };
+};
+
 const Home = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [cases, setCases] = useState<TCase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Load cases from API for dashboard
+  useEffect(() => {
+    const loadCases = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await casesApi.getAll({
+          with_clients: true,
+          with_parties: true,
+          with_hearings: true,
+          with_payments: true,
+          per_page: 100,
+        });
+
+        if (response.data) {
+          const items = response.data.data || [];
+
+          // Only keep cases that have both client and party information
+          const completeCases = items.filter((item: CaseListItem | any) => {
+            const raw: any = item as any;
+            const clients = raw.caseClients ?? raw.case_clients;
+            const parties = raw.caseParties ?? raw.case_parties;
+            const hasClient = Array.isArray(clients) && clients.length > 0;
+            const hasParty = Array.isArray(parties) && parties.length > 0;
+            return hasClient && hasParty;
+          });
+
+          const mapped = completeCases.map(mapApiCaseToTCase);
+          setCases(mapped);
+        }
+      } catch (err: any) {
+        const message = err?.message || "Failed to load dashboard data";
+        setError(message);
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCases();
+  }, []);
+
   // Get stage badge style
   const getStageStyle = (stage: string) => {
     if (stage === "Active") {
@@ -32,7 +226,7 @@ const Home = () => {
   };
 
   // Process data for Case Stage Pie Chart
-  const caseStageData = dummyCase.reduce((acc, caseItem) => {
+  const caseStageData = cases.reduce((acc, caseItem) => {
     const stage = caseItem.case_stage;
     const existing = acc.find((item) => item.name === stage);
     if (existing) {
@@ -46,7 +240,7 @@ const Home = () => {
   const PIE_COLORS = ["#3b82f6", "#ef4444", "#f97316", "#10b981"];
 
   // Process data for Cases by Court Bar Chart
-  const casesByCourt = dummyCase.reduce((acc, caseItem) => {
+  const casesByCourt = cases.reduce((acc, caseItem) => {
     const courtName = caseItem.court_details.name;
     const existing = acc.find((item) => item.name === courtName);
     if (existing) {
@@ -58,7 +252,7 @@ const Home = () => {
   }, [] as { name: string; cases: number }[]);
 
   // Process data for Cases by Lawyer Bar Chart
-  const casesByLawyer = dummyCase.reduce((acc, caseItem) => {
+  const casesByLawyer = cases.reduce((acc, caseItem) => {
     const lawyerName = caseItem.lawyer_details.name;
     const existing = acc.find((item) => item.name === lawyerName);
     if (existing) {
@@ -70,7 +264,7 @@ const Home = () => {
   }, [] as { name: string; cases: number }[]);
 
   // Process data for Monthly Revenue Line Chart
-  const monthlyRevenue = dummyCase.reduce((acc, caseItem) => {
+  const monthlyRevenue = cases.reduce((acc, caseItem) => {
     caseItem.payments.forEach((payment) => {
       const date = new Date(payment.paid_date);
       const month = date.toLocaleDateString("en-US", {
@@ -92,38 +286,62 @@ const Home = () => {
     return a.date - b.date;
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 border-4 border-primary-green/30 border-t-primary-green rounded-full animate-spin" />
+          <p className="text-sm text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <p className="text-lg font-semibold text-gray-900">
+            Failed to load dashboard
+          </p>
+          <p className="text-sm text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Welcome Section */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold ">Welcome back 👋</h1>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Welcome back 👋</h1>
       </div>
 
       {/* Stats Cards - Horizontal Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         {/* Total Cases Card - Light Blue */}
-        <Link to="/dashboard/cases" className="bg-linear-to-br from-blue-400 via-blue-50 to-blue-100 rounded-2xl border-2 border-blue-300/40 shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] transition-all duration-500 p-7 relative overflow-hidden group cursor-pointer block">
+        <Link to="/dashboard/cases" className="bg-linear-to-br from-blue-400 via-blue-50 to-blue-100 rounded-xl sm:rounded-2xl border-2 border-blue-300/40 shadow-lg sm:shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-500 p-4 sm:p-7 relative overflow-hidden group cursor-pointer block">
           {/* Animated Background Elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-blue-300/40 rounded-full -mr-20 -mt-20 group-hover:scale-150 group-hover:bg-blue-400/50 transition-all duration-700"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-200/30 rounded-full -ml-16 -mb-16 group-hover:scale-125 transition-all duration-700"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-blue-300/40 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 group-hover:bg-blue-400/50 transition-all duration-700"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-blue-200/30 rounded-full -ml-12 sm:-ml-16 -mb-12 sm:-mb-16 group-hover:scale-125 transition-all duration-700"></div>
           
           <div className="relative z-10">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                  <p className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Total Cases</p>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  <p className="text-xs sm:text-sm font-semibold text-blue-700 uppercase tracking-wide">Total Cases</p>
                 </div>
-                <h3 className="text-5xl font-extrabold  mb-2 bg-linear-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                  {dummyCase.length}
+                <h3 className="text-3xl sm:text-5xl font-extrabold mb-1 sm:mb-2 bg-linear-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  {cases.length}
                 </h3>
-                <p className="text-xs font-medium text-blue-600/80 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <p className="text-[10px] sm:text-xs font-medium text-blue-600/80 flex items-center gap-1">
+                  <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-blue-500"></span>
                   All registered cases
                 </p>
               </div>
-              <div className="p-5 rounded-2xl bg-linear-to-br from-blue-500 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-blue-400/50">
-                <FileText className="w-8 h-8 text-white" strokeWidth={2.5} />
+              <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-linear-to-br from-blue-500 to-blue-600 shadow-md sm:shadow-lg group-hover:shadow-blue-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-blue-400/50">
+                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-white" strokeWidth={2.5} />
               </div>
             </div>
           </div>
@@ -133,28 +351,28 @@ const Home = () => {
         </Link>
 
         {/* Upcoming Cases Card - Light Pink */}
-        <Link to="/dashboard/cases" className="bg-linear-to-br from-pink-400 via-pink-50 to-pink-100 rounded-2xl border-2 border-pink-300/40 shadow-2xl hover:shadow-pink-500/20 hover:scale-[1.02] transition-all duration-500 p-7 relative overflow-hidden group cursor-pointer block">
+        <Link to="/dashboard/cases" className="bg-linear-to-br from-pink-400 via-pink-50 to-pink-100 rounded-xl sm:rounded-2xl border-2 border-pink-300/40 shadow-lg sm:shadow-2xl hover:shadow-pink-500/20 hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-500 p-4 sm:p-7 relative overflow-hidden group cursor-pointer block">
           {/* Animated Background Elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-pink-300/40 rounded-full -mr-20 -mt-20 group-hover:scale-150 group-hover:bg-pink-400/50 transition-all duration-700"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-200/30 rounded-full -ml-16 -mb-16 group-hover:scale-125 transition-all duration-700"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-pink-300/40 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 group-hover:bg-pink-400/50 transition-all duration-700"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-pink-200/30 rounded-full -ml-12 sm:-ml-16 -mb-12 sm:-mb-16 group-hover:scale-125 transition-all duration-700"></div>
           
           <div className="relative z-10">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></div>
-                  <p className="text-sm font-semibold text-pink-700 uppercase tracking-wide">Upcoming Cases</p>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 animate-pulse"></div>
+                  <p className="text-xs sm:text-sm font-semibold text-pink-700 uppercase tracking-wide">Upcoming Cases</p>
                 </div>
-                <h3 className="text-5xl font-extrabold  mb-2 bg-linear-to-r from-pink-600 to-pink-800 bg-clip-text text-transparent">
-                  {dummyCase.length}
+                <h3 className="text-3xl sm:text-5xl font-extrabold mb-1 sm:mb-2 bg-linear-to-r from-pink-600 to-pink-800 bg-clip-text text-transparent">
+                  {cases.length}
                 </h3>
-                <p className="text-xs font-medium text-pink-600/80 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500"></span>
+                <p className="text-[10px] sm:text-xs font-medium text-pink-600/80 flex items-center gap-1">
+                  <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-pink-500"></span>
                   Scheduled hearings
                 </p>
               </div>
-              <div className="p-5 rounded-2xl bg-linear-to-br from-pink-500 to-pink-600 shadow-lg group-hover:shadow-pink-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-pink-400/50">
-                <Calendar className="w-8 h-8 text-white" strokeWidth={2.5} />
+              <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-linear-to-br from-pink-500 to-pink-600 shadow-md sm:shadow-lg group-hover:shadow-pink-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-pink-400/50">
+                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-white" strokeWidth={2.5} />
               </div>
             </div>
           </div>
@@ -164,28 +382,28 @@ const Home = () => {
         </Link>
 
         {/* Completed Cases Card - Light Green */}
-        <Link to="/dashboard/cases" className="bg-linear-to-br from-green-400 via-green-50 to-green-100 rounded-2xl border-2 border-green-300/40 shadow-2xl hover:shadow-green-500/20 hover:scale-[1.02] transition-all duration-500 p-7 relative overflow-hidden group cursor-pointer block">
+        <Link to="/dashboard/cases" className="bg-linear-to-br from-green-400 via-green-50 to-green-100 rounded-xl sm:rounded-2xl border-2 border-green-300/40 shadow-lg sm:shadow-2xl hover:shadow-green-500/20 hover:scale-[1.01] sm:hover:scale-[1.02] transition-all duration-500 p-4 sm:p-7 relative overflow-hidden group cursor-pointer block">
           {/* Animated Background Elements */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-green-300/40 rounded-full -mr-20 -mt-20 group-hover:scale-150 group-hover:bg-green-400/50 transition-all duration-700"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-200/30 rounded-full -ml-16 -mb-16 group-hover:scale-125 transition-all duration-700"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 sm:w-40 sm:h-40 bg-green-300/40 rounded-full -mr-16 sm:-mr-20 -mt-16 sm:-mt-20 group-hover:scale-150 group-hover:bg-green-400/50 transition-all duration-700"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-32 sm:h-32 bg-green-200/30 rounded-full -ml-12 sm:-ml-16 -mb-12 sm:-mb-16 group-hover:scale-125 transition-all duration-700"></div>
           
           <div className="relative z-10">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <p className="text-sm font-semibold text-green-700 uppercase tracking-wide">Completed Cases</p>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <p className="text-xs sm:text-sm font-semibold text-green-700 uppercase tracking-wide">Completed Cases</p>
                 </div>
-                <h3 className="text-5xl font-extrabold  mb-2 bg-linear-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
-                  {dummyCase.length}
+                <h3 className="text-3xl sm:text-5xl font-extrabold mb-1 sm:mb-2 bg-linear-to-r from-green-600 to-green-800 bg-clip-text text-transparent">
+                  {cases.length}
                 </h3>
-                <p className="text-xs font-medium text-green-600/80 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                <p className="text-[10px] sm:text-xs font-medium text-green-600/80 flex items-center gap-1">
+                  <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-green-500"></span>
                   Resolved cases
                 </p>
               </div>
-              <div className="p-5 rounded-2xl bg-linear-to-br from-green-500 to-green-600 shadow-lg group-hover:shadow-green-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-green-400/50">
-                <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={2.5} />
+              <div className="p-3 sm:p-5 rounded-xl sm:rounded-2xl bg-linear-to-br from-green-500 to-green-600 shadow-md sm:shadow-lg group-hover:shadow-green-500/50 group-hover:rotate-6 transition-all duration-500 border-2 border-green-400/50">
+                <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" strokeWidth={2.5} />
               </div>
             </div>
           </div>
@@ -196,11 +414,11 @@ const Home = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Case Stage Distribution - Pie Chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Case Stage Distribution</h2>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Case Stage Distribution</h2>
+          <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
             <PieChart>
               <Pie
                 data={caseStageData}
@@ -208,13 +426,13 @@ const Home = () => {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
+                  percent ? `${name}: ${(percent * 100).toFixed(0)}%` : name
                 }
-                outerRadius={100}
+                outerRadius={isMobile ? 70 : 100}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {caseStageData.map((entry, index) => (
+                {caseStageData.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={PIE_COLORS[index % PIE_COLORS.length]}
@@ -228,17 +446,17 @@ const Home = () => {
         </div>
 
         {/* Cases by Court - Bar Chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Cases by Court</h2>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Cases by Court</h2>
+          <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
             <BarChart data={casesByCourt}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="name"
-                angle={-45}
+                angle={isMobile ? -90 : -45}
                 textAnchor="end"
-                height={100}
-                fontSize={12}
+                height={isMobile ? 120 : 100}
+                fontSize={isMobile ? 10 : 12}
               />
               <YAxis />
               <Tooltip />
@@ -249,9 +467,9 @@ const Home = () => {
         </div>
 
         {/* Monthly Revenue - Line Chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Monthly Revenue</h2>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Monthly Revenue</h2>
+          <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
             <LineChart data={monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
@@ -273,12 +491,18 @@ const Home = () => {
         </div>
 
         {/* Cases by Lawyer - Bar Chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Cases by Lawyer</h2>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Cases by Lawyer</h2>
+          <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
             <BarChart data={casesByLawyer}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis 
+                dataKey="name" 
+                angle={isMobile ? -45 : 0}
+                textAnchor={isMobile ? "end" : "middle"}
+                height={isMobile ? 80 : 0}
+                fontSize={isMobile ? 10 : 12}
+              />
               <YAxis />
               <Tooltip />
               <Legend />
@@ -289,82 +513,79 @@ const Home = () => {
       </div>
 
       {/* Upcoming Cases Table - Full Width */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div>
-          <h2 className="text-lg font-semibold ">
+          <h2 className="text-base sm:text-lg font-semibold">
             Upcoming Cases
           </h2>
         </div>
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-primary-green border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black first:rounded-tl-xl">
-                    SL
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Case Id
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Number of Case
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Case Stage
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Payment Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Client
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black">
-                    Party
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-black last:rounded-tr-xl">
-                    Lawyer
-                  </th>
-                </tr>
-              </thead>
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr className="bg-primary-green border-b border-gray-200">
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black">
+                      SL
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black">
+                      Case Id
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black hidden sm:table-cell">
+                      Number of Case
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black">
+                      Case Stage
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black hidden md:table-cell">
+                      Payment Status
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black">
+                      Client
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black hidden lg:table-cell">
+                      Party
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-black">
+                      Lawyer
+                    </th>
+                  </tr>
+                </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dummyCase.map((caseItem, index, arr) => {
-                  const isLast = index === arr.length - 1;
+                {cases.map((caseItem, index) => {
                   return (
                     <tr
                       key={caseItem.id}
-                      className={
-                        "hover:bg-gray-50 transition-colors" +
-                        (isLast ? " last:rounded-b-xl" : "")
-                      }
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className={`px-4 py-3 ${isLast ? "first:rounded-bl-xl" : ""}`}>
-                        <span className="text-sm font-medium text-gray-700">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">
                           {index + 1}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex items-center gap-2">
                           <div>
-                            <p className="text-sm font-medium ">
+                            <p className="text-xs sm:text-sm font-medium">
                               {caseItem.case_number}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-[10px] sm:text-xs text-gray-500">
                               {caseItem.file_number}
                             </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-medium ">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                        <p className="text-xs sm:text-sm font-medium">
                           {caseItem.case_number}
                         </p>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStageStyle(
+                          className={`inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold border ${getStageStyle(
                             caseItem.case_stage
                           )}`}
                         >
@@ -372,29 +593,29 @@ const Home = () => {
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
+                        <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-gray-100 text-gray-700">
                           N/A
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-medium ">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
+                        <p className="text-xs sm:text-sm font-medium">
                           {caseItem.client_details.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[10px] sm:text-xs text-gray-500">
                           {caseItem.client_details.account_id}
                         </p>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-medium ">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell">
+                        <p className="text-xs sm:text-sm font-medium">
                           {caseItem.party_details.name}
                         </p>
                       </td>
 
-                      <td className={`px-4 py-3 ${isLast ? "last:rounded-br-xl" : ""}`}>
-                        <p className="text-sm font-medium ">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
+                        <p className="text-xs sm:text-sm font-medium">
                           {caseItem.lawyer_details.name}
                         </p>
                       </td>
@@ -402,7 +623,8 @@ const Home = () => {
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         </div>
       </div>
